@@ -220,7 +220,6 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout }: Prop
           <h2 className="text-xl font-semibold">API 配置</h2>
           <p className="mt-1 text-sm text-stone-500">填写模型 API 密钥以启用 AI 生成功能，密钥仅存储在本地浏览器中。</p>
 
-          {/* 使用默认模型开关 */}
           <div className="mt-4 flex items-center justify-between rounded-md border border-stone-200 bg-stone-50 px-4 py-3">
             <div>
               <div className="text-sm font-medium text-stone-800">使用系统默认模型</div>
@@ -391,6 +390,8 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout }: Prop
             type="button"
             onClick={() => {
               logoutUser();
+              setProfile({ nickname: "", avatarUrl: "", createdAt: Date.now() });
+              setApiConfig({ textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "" });
               onLogout?.();
             }}
             className="mt-4 rounded-md border border-red-300 bg-red-50 px-5 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100"
