@@ -92,8 +92,12 @@ export default function LoginModal({ onClose, onLoggedIn, initialStep, onRegiste
   );
 
   const randomizeNickname = useCallback(() => {
-    setNickname(generateRandomNickname());
-  }, []);
+    const name = generateRandomNickname();
+    setNickname(name);
+    if (!username.trim()) {
+      setUsername(name);
+    }
+  }, [username]);
 
   const handleAvatarUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
