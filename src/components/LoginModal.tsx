@@ -166,7 +166,7 @@ export default function LoginModal({ onClose, onLoggedIn, initialStep, onRegiste
 
             <p className="mt-4 text-center text-sm text-stone-500">
               还没有账号？
-              <button type="button" onClick={() => { setNickname(username.trim() || generateRandomNickname()); setStep("register"); setError(""); }} className="ml-1 font-medium text-[#8f1d21] hover:underline">
+              <button type="button" onClick={() => { const randomName = generateRandomNickname(); setUsername(username.trim() || randomName); setNickname(username.trim() || randomName); setStep("register"); setError(""); }} className="ml-1 font-medium text-[#8f1d21] hover:underline">
                 立即注册
               </button>
             </p>
