@@ -11,6 +11,7 @@ import {
   type MappedPixel,
   type PaletteColor,
   type RgbColor,
+  type ImageFilter,
 } from "./pixelation";
 import { getHeritageToHexMapping } from "./colorSystemUtils";
 
@@ -190,6 +191,7 @@ export function renderSampleDesignOriginal(options: CulturePromptOptions): strin
 export function generateSamplePattern(
   options: CulturePromptOptions & { antiAlias: boolean },
   forcedHexColors: string[] = [],
+  filter?: ImageFilter,
 ): BeadPattern {
   const canvas = document.createElement("canvas");
   canvas.width = options.gridSize;
@@ -209,6 +211,7 @@ export function generateSamplePattern(
     palette,
     PixelationMode.Dominant,
     whiteFallback,
+    filter,
   );
 
   const limited = clampColorCount(grid, options.colorCount, forcedHexColors);
@@ -227,6 +230,7 @@ export async function imageDataUrlToPattern(
   imageUrl: string,
   options: CulturePromptOptions & { antiAlias: boolean; source: "ai" | "upload"; preserveSourceRatio?: boolean },
   forcedHexColors: string[] = [],
+  filter?: ImageFilter,
 ): Promise<BeadPattern> {
   const image = new Image();
   image.crossOrigin = "anonymous";
@@ -261,6 +265,7 @@ export async function imageDataUrlToPattern(
     palette,
     PixelationMode.Dominant,
     whiteFallback,
+    filter,
   );
   const limited = clampColorCount(grid, options.colorCount, forcedHexColors);
   const cleaned = options.antiAlias ? removeSingleCellNoise(limited) : limited;

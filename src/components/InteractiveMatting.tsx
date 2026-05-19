@@ -307,16 +307,14 @@ export default function InteractiveMatting({ imageUrl, onMattingResult, onClose 
         用绿色画笔涂抹您想保留的区域（前景），用红色画笔涂抹要去掉的区域（背景）。点击&ldquo;生成蒙版&rdquo;自动计算，满意后点击&ldquo;应用结果&rdquo;。
       </p>
 
-      {/* 画布 */}
+      {/* 画布 — 按原图比例显示，不强制尺寸 */}
       <div className="relative mx-auto flex max-w-full justify-center overflow-hidden rounded-lg border border-slate-300 bg-slate-100">
         <canvas
           ref={canvasRef}
           className="block max-w-full touch-none"
           style={{
-            width: imageSize.w,
-            height: imageSize.h,
             maxWidth: "100%",
-            aspectRatio: `${imageSize.w}/${imageSize.h}`,
+            height: "auto",
           }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}

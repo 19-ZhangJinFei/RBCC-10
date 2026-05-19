@@ -4,13 +4,12 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { MappedPixel } from '../utils/pixelation';
 import { TRANSPARENT_KEY } from '../utils/pixelEditingUtils';
 import { ColorReplaceState } from '../hooks/useManualEditingState';
-import { ColorSystem, getColorKeyByHex } from '../utils/colorSystemUtils';
+import { getColorKeyByHex } from '../utils/colorSystemUtils';
 
 interface FloatingColorPaletteProps {
   colors: { key: string; color: string }[];
   selectedColor: MappedPixel | null;
   onColorSelect: (colorData: { key: string; color: string; isExternal?: boolean }) => void;
-  selectedColorSystem: ColorSystem;
   isEraseMode: boolean;
   onEraseToggle: () => void;
   fullPaletteColors: { key: string; color: string }[];
@@ -32,7 +31,6 @@ const FloatingColorPalette: React.FC<FloatingColorPaletteProps> = ({
   colors,
   selectedColor,
   onColorSelect,
-  selectedColorSystem,
   isEraseMode,
   onEraseToggle,
   fullPaletteColors,
@@ -307,7 +305,7 @@ const FloatingColorPalette: React.FC<FloatingColorPaletteProps> = ({
           <div className="grid grid-cols-6 gap-1.5">
             {displayColors.map((colorData) => {
               const isSelected = selectedColor?.key === colorData.key && selectedColor?.color === colorData.color;
-              const displayKey = getColorKeyByHex(colorData.color, selectedColorSystem);
+              const displayKey = getColorKeyByHex(colorData.color);
               
               return (
                 <button
@@ -346,7 +344,7 @@ const FloatingColorPalette: React.FC<FloatingColorPaletteProps> = ({
                   style={{ backgroundColor: selectedColor.color }}
                 ></div>
                 <span className="text-gray-700 dark:text-gray-300">
-                  当前: {getColorKeyByHex(selectedColor.color, selectedColorSystem)}
+                  当前: {getColorKeyByHex(selectedColor.color)}
                 </span>
               </div>
             </div>

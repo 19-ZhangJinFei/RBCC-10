@@ -155,7 +155,7 @@ export default function CultureGeneratorPage() {
   }, [aspectRatio, extractedImageKey, pattern, patternUrl, productId, abortSceneRequest]);
 
 
-  const beadCounts = useMemo(() => (pattern ? countBeads(pattern.grid, "heritage") : []), [pattern]);
+  const beadCounts = useMemo(() => (pattern ? countBeads(pattern.grid) : []), [pattern]);
   const copy = useMemo(
     () => {
       if (aiCopy) return aiCopy;
@@ -214,7 +214,7 @@ export default function CultureGeneratorPage() {
       setExtractedImageUrl(result.imageUrl);
       setProductSceneUrl(null);
       setPattern(next);
-      const nextCopy = await requestAiCopy(result.imageUrl, countBeads(next.grid, "heritage"));
+      const nextCopy = await requestAiCopy(result.imageUrl, countBeads(next.grid));
       setAiCopy(nextCopy);
     } catch (err) {
       setError(err instanceof Error ? err.message : "AI 生成请求失败");
@@ -254,7 +254,7 @@ export default function CultureGeneratorPage() {
           preserveSourceRatio: false,
         });
         setPattern(next);
-        const nextCopy = await requestAiCopy(extractResult.imageUrl, countBeads(next.grid, "heritage"));
+        const nextCopy = await requestAiCopy(extractResult.imageUrl, countBeads(next.grid));
         setAiCopy(nextCopy);
         setError(null);
       } catch (err) {

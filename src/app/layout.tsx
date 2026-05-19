@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "豆韵 | 传统元素拼豆设计工具",
-  description: "上传图片、提取主体、生成拼豆图纸和产品预览的一站式文创设计工具。",
+  title: "豆韵 | 传统纹样拼豆设计工具",
+  description: "以AI为笔，将千年纹样织入像素网格，化作可供触摸的豆粒诗篇。",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

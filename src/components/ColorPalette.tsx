@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import React from 'react';
-import { getDisplayColorKey, ColorSystem } from '../utils/colorSystemUtils';
+import { getDisplayColorKey } from '../utils/colorSystemUtils';
 
 // Define the structure of the color data expected by the palette
 interface ColorData {
@@ -22,7 +22,6 @@ interface ColorPaletteProps {
   selectedColor: ColorData | null;
   onColorSelect: (colorData: ColorData) => void;
   transparentKey?: string; // 添加可选参数，用于识别哪个是透明/橡皮擦
-  selectedColorSystem?: ColorSystem; // 添加色号系统参数
   // 新增：一键擦除相关props
   isEraseMode?: boolean;
   onEraseToggle?: () => void;
@@ -43,7 +42,6 @@ const ColorPalette: React.FC<ColorPaletteProps> = ({
   selectedColor, 
   onColorSelect,
   transparentKey,
-  selectedColorSystem,
   isEraseMode,
   onEraseToggle,
   onHighlightColor,
@@ -125,7 +123,7 @@ const ColorPalette: React.FC<ColorPaletteProps> = ({
                       style={{ backgroundColor: colorReplaceState.sourceColor?.color }}
                     ></span>
                     <span className="font-mono text-xs">
-                      {selectedColorSystem ? getDisplayColorKey(colorReplaceState.sourceColor?.color || '', selectedColorSystem) : colorReplaceState.sourceColor?.key}
+                      {getDisplayColorKey(colorReplaceState.sourceColor?.color || '') || colorReplaceState.sourceColor?.key}
                     </span>
                   </div>
                 </div>
@@ -233,7 +231,7 @@ const ColorPalette: React.FC<ColorPaletteProps> = ({
         // 获取要显示的色号
         const displayColorKey = isTransparent 
           ? '' 
-          : (selectedColorSystem ? getDisplayColorKey(colorData.color, selectedColorSystem) : colorData.key);
+          : getDisplayColorKey(colorData.color) || colorData.key;
         
         // 获取对比色用于文字显示
         const getContrastColor = (hex: string): string => {

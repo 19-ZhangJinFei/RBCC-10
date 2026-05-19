@@ -1,4 +1,4 @@
-﻿import { getColorKeyByHex, type ColorSystem } from "./colorSystemUtils";
+﻿import { getColorKeyByHex } from "./colorSystemUtils";
 import type { MappedPixel } from "./pixelation";
 
 export type BeadCount = {
@@ -27,7 +27,7 @@ function inferUsage(hex: string): string {
   return "填充";
 }
 
-export function countBeads(grid: MappedPixel[][], colorSystem: ColorSystem = "heritage"): BeadCount[] {
+export function countBeads(grid: MappedPixel[][]): BeadCount[] {
   const map = new Map<string, number>();
   let total = 0;
 
@@ -40,8 +40,8 @@ export function countBeads(grid: MappedPixel[][], colorSystem: ColorSystem = "he
 
   return Array.from(map.entries())
     .map(([hex, count]) => ({
-      colorName: getColorKeyByHex(hex, colorSystem),
-      brandCode: getColorKeyByHex(hex, colorSystem),
+      colorName: getColorKeyByHex(hex),
+      brandCode: getColorKeyByHex(hex),
       rgb: hex,
       count,
       ratio: total === 0 ? 0 : count / total,

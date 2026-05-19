@@ -1,6 +1,6 @@
 ﻿import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { MappedPixel } from '../utils/pixelation';
-import { getColorKeyByHex, ColorSystem } from '../utils/colorSystemUtils';
+import { getColorKeyByHex } from '../utils/colorSystemUtils';
 
 interface MagnifierToolProps {
   isActive: boolean;
@@ -8,7 +8,6 @@ interface MagnifierToolProps {
   mappedPixelData: MappedPixel[][] | null;
   gridDimensions: { N: number; M: number } | null;
   selectedColor: MappedPixel | null;
-  selectedColorSystem: ColorSystem;
   onPixelEdit: (row: number, col: number, colorData: { key: string; color: string }) => void;
   cellSize: number;
   selectionArea: SelectionArea | null;
@@ -30,7 +29,6 @@ const MagnifierTool: React.FC<MagnifierToolProps> = ({
   onToggle,
   mappedPixelData,
   selectedColor,
-  selectedColorSystem,
   onPixelEdit,
   selectionArea,
   onClearSelection,
@@ -364,7 +362,7 @@ const MagnifierTool: React.FC<MagnifierToolProps> = ({
                     style={{ backgroundColor: selectedColor.color }}
                   ></div>
                   <span className="text-gray-700 dark:text-gray-300">
-                    当前: {getColorKeyByHex(selectedColor.color, selectedColorSystem)}
+        当前: {getColorKeyByHex(selectedColor.color)}
                   </span>
                 </div>
               </div>

@@ -568,7 +568,7 @@ export async function downloadImage({
           ctx.fillRect(drawX, drawY, downloadCellSize, downloadCellSize);
 
           if (showCellNumbers) {
-            const cellKey = getDisplayColorKey(cellData.color || '#FFFFFF', selectedColorSystem);
+      const cellKey = getDisplayColorKey(cellData.color || '#FFFFFF');
             ctx.fillStyle = getContrastColor(cellColor);
             ctx.fillText(cellKey, drawX + downloadCellSize / 2, drawY + downloadCellSize / 2);
           }
@@ -720,7 +720,7 @@ export async function downloadImage({
         // 绘制色号
         ctx.fillStyle = '#333333';
         ctx.textAlign = 'left';
-        ctx.fillText(getColorKeyByHex(key, selectedColorSystem), itemX + swatchSize + 5, rowY);
+        ctx.fillText(getColorKeyByHex(key), itemX + swatchSize + 5, rowY);
         
         // 绘制数量 - 在每个项目的右侧
         const countText = `${cellData.count} 颗`;

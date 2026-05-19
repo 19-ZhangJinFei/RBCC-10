@@ -3,38 +3,17 @@
 import React, { useState, useEffect } from 'react';
 import { PaletteColor } from '../utils/pixelation';
 import { PaletteSelections } from '../utils/localStorageUtils';
-import { getDisplayColorKey, ColorSystem } from '../utils/colorSystemUtils';
+import { getDisplayColorKey } from '../utils/colorSystemUtils';
 
-// 对颜色进行分组的工具函数，按前缀分组
-function groupColorsByPrefix(colors: PaletteColor[], selectedColorSystem: ColorSystem): Record<string, PaletteColor[]> {
+// 对颜色进行分组的工具函数，按字母前缀分组
+function groupColorsByPrefix(colors: PaletteColor[]): Record<string, PaletteColor[]> {
   const groups: Record<string, PaletteColor[]> = {};
   
   colors.forEach(color => {
-    const displayKey = getDisplayColorKey(color.hex, selectedColorSystem);
+    const displayKey = getDisplayColorKey(color.hex);
     
-    let prefix: string;
-    if (selectedColorSystem === 'sequence') {
-      // 对于纯数字的色号系统，按数字范围分组
-      if (/^\d+$/.test(displayKey)) {
-        const num = parseInt(displayKey, 10);
-        if (num <= 20) {
-          prefix = '1-20';
-        } else if (num <= 50) {
-          prefix = '21-50';
-        } else if (num <= 100) {
-          prefix = '51-100';
-        } else if (num <= 200) {
-          prefix = '101-200';
-        } else {
-          prefix = '200+';
-        }
-      } else {
-        prefix = '其他';
-      }
-    } else {
-      // 对于有字母前缀的色号系统，按字母前缀分组
-      prefix = displayKey.match(/^[A-Z]+/)?.[0] || '其他';
-    }
+    // 对于有字母前缀的色号系统，按字母前缀分组
+    const prefix = displayKey.match(/^[A-Z]+/)?.[0] || '其他';
     
     if (!groups[prefix]) {
       groups[prefix] = [];
@@ -45,20 +24,13 @@ function groupColorsByPrefix(colors: PaletteColor[], selectedColorSystem: ColorS
   // 对每个组内的颜色按键进行排序
   Object.keys(groups).forEach(prefix => {
     groups[prefix].sort((a, b) => {
-      const displayKeyA = getDisplayColorKey(a.hex, selectedColorSystem);
-      const displayKeyB = getDisplayColorKey(b.hex, selectedColorSystem);
+      const displayKeyA = getDisplayColorKey(a.hex);
+      const displayKeyB = getDisplayColorKey(b.hex);
       
-      if (selectedColorSystem === 'sequence') {
-        // 对于纯数字色号，按数字大小排序
-        const numA = parseInt(displayKeyA, 10) || 0;
-        const numB = parseInt(displayKeyB, 10) || 0;
-        return numA - numB;
-      } else {
-        // 对于有字母前缀的色号，按字母+数字排序
-        const numA = parseInt(displayKeyA.replace(/^[A-Z]+/, ''), 10) || 0;
-        const numB = parseInt(displayKeyB.replace(/^[A-Z]+/, ''), 10) || 0;
+      // 对于有字母前缀的色号，按字母+数字排序
+      const numA = parseInt(displayKeyA.replace(/^[A-Z]+/, ''), 10) || 0;
+      const numB = parseInt(displayKeyB.replace(/^[A-Z]+/, ''), 10) || 0;
       return numA - numB;
-      }
     });
   });
   
@@ -73,7 +45,6 @@ interface CustomPaletteEditorProps {
   onClose: () => void;
   onExportCustomPalette: () => void;
   onImportCustomPalette: () => void;
-  selectedColorSystem: ColorSystem;
 }
 
 const CustomPaletteEditor: React.FC<CustomPaletteEditorProps> = ({
@@ -84,7 +55,6 @@ const CustomPaletteEditor: React.FC<CustomPaletteEditorProps> = ({
   onClose,
   onExportCustomPalette,
   onImportCustomPalette,
-  selectedColorSystem,
 }) => {
   // 用于跟踪当前展开的颜色组
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
@@ -101,14 +71,14 @@ const CustomPaletteEditor: React.FC<CustomPaletteEditorProps> = ({
   const filteredColors = searchTerm 
     ? allColors.filter(color => {
         const originalKey = color.key.toLowerCase();
-        const displayKey = getDisplayColorKey(color.hex, selectedColorSystem).toLowerCase();
+        const displayKey = getDisplayColorKey(color.hex).toLowerCase();
         const searchLower = searchTerm.toLowerCase();
         return originalKey.includes(searchLower) || displayKey.includes(searchLower);
       })
     : allColors;
   
   // 对过滤后的颜色进行分组
-  const colorGroups = groupColorsByPrefix(filteredColors, selectedColorSystem);
+  const colorGroups = groupColorsByPrefix(filteredColors);
   
   // 切换组展开状态
   const toggleGroup = (prefix: string) => {
@@ -176,7 +146,7 @@ const CustomPaletteEditor: React.FC<CustomPaletteEditorProps> = ({
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-blue-500 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
           </svg>
-          在此选择要使用的拼豆色系。您可以选择预设色板，然后根据需要手动添加或删除特定色号。完成后点击底部的&quot;保存并应用&quot;按钮。
+          在此选择要使用的拼豆色系。您可以选择预设色板，然后根据需要手动添加或删除特定色号。完成后点击底部的「保存并应用」按钮。
         </p>
       </div>
       
@@ -282,7 +252,7 @@ const CustomPaletteEditor: React.FC<CustomPaletteEditorProps> = ({
                       className="w-6 h-6 rounded-sm border border-gray-300 dark:border-gray-600 flex-shrink-0"
                       style={{ backgroundColor: color.hex }}
                     />
-                    <span className="text-sm text-gray-800 dark:text-gray-200">{getDisplayColorKey(color.hex, selectedColorSystem)}</span>
+                    <span className="text-sm text-gray-800 dark:text-gray-200">{getDisplayColorKey(color.hex)}</span>
                   </label>
                 ))}
               </div>
@@ -310,4 +280,4 @@ const CustomPaletteEditor: React.FC<CustomPaletteEditorProps> = ({
   );
 };
 
-export default CustomPaletteEditor; 
+export default CustomPaletteEditor;

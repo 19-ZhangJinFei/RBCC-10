@@ -6,8 +6,8 @@ export enum PixelationMode {
   Average = 'average',   // 真实模式（平均色）
 }
 
-// 定义色号系统类型
-export type ColorSystem = "heritage" | "palette" | "sequence";
+// 色号系统类型（统一使用传统色号）
+export type ColorSystem = "heritage";
 
 // --- 必要的类型定义 ---
 export interface RgbColor {
@@ -33,6 +33,9 @@ export interface MappedPixel {
   color: string;
   isExternal?: boolean;
 }
+
+/** 图像滤镜类型 */
+export type ImageFilter = "none" | "contrast" | "vibrant" | "pastel" | "warm" | "cool" | "grayscale" | "sepia";
 
 // --- 辅助函数 ---
 
@@ -124,6 +127,108 @@ export function findClosestPaletteColor(
   return closestColor;
 }
 
+// ============================================================
+// 图像滤镜处理函数
+// ============================================================
+
+/**
+ * 对 ImageData 应用图像滤镜，返回处理后的新 ImageData
+ * @param imageData 原始图像数据
+ * @param filter 滤镜类型
+ * @returns 处理后的 ImageData
+ */
+export function applyImageFilter(imageData: ImageData, filter: ImageFilter): ImageData {
+  if (filter === "none") return imageData;
+
+  const data = new Uint8ClampedArray(imageData.data);
+  const width = imageData.width;
+  const height = imageData.height;
+
+  for (let i = 0; i < data.length; i += 4) {
+    let r = data[i];
+    let g = data[i + 1];
+    let b = data[i + 2];
+    const a = data[i + 3];
+
+    // 跳过透明像素
+    if (a < 128) continue;
+
+    switch (filter) {
+      case "contrast":
+        // 高对比：增强 RGB 差异，将颜色推向极端
+        r = r > 127 ? Math.min(255, r + 60) : Math.max(0, r - 40);
+        g = g > 127 ? Math.min(255, g + 60) : Math.max(0, g - 40);
+        b = b > 127 ? Math.min(255, b + 60) : Math.max(0, b - 40);
+        break;
+
+      case "vibrant":
+        // 鲜艳：提高饱和度，将每个通道推向极值
+        {
+          const avg = (r + g + b) / 3;
+          r = Math.min(255, Math.max(0, r + (r - avg) * 0.8));
+          g = Math.min(255, Math.max(0, g + (g - avg) * 0.8));
+          b = Math.min(255, Math.max(0, b + (b - avg) * 0.8));
+        }
+        break;
+
+      case "pastel":
+        // 柔和：降低饱和度并提亮
+        {
+          const avg = (r + g + b) / 3;
+          r = Math.min(255, Math.round(avg + (r - avg) * 0.4));
+          g = Math.min(255, Math.round(avg + (g - avg) * 0.4));
+          b = Math.min(255, Math.round(avg + (b - avg) * 0.4));
+          // 提亮
+          r = Math.min(255, Math.round(r + (255 - r) * 0.15));
+          g = Math.min(255, Math.round(g + (255 - g) * 0.15));
+          b = Math.min(255, Math.round(b + (255 - b) * 0.15));
+        }
+        break;
+
+      case "warm":
+        // 暖色调：增强红/橙，削弱蓝色
+        r = Math.min(255, Math.round(r * 1.2));
+        g = Math.min(255, Math.round(g * 1.05));
+        b = Math.max(0, Math.round(b * 0.7));
+        break;
+
+      case "cool":
+        // 冷色调：增强蓝/青，削弱红色
+        r = Math.max(0, Math.round(r * 0.7));
+        g = Math.min(255, Math.round(g * 1.05));
+        b = Math.min(255, Math.round(b * 1.2));
+        break;
+
+      case "grayscale":
+        // 灰度：标准亮度去色
+        {
+          const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+          r = gray;
+          g = gray;
+          b = gray;
+        }
+        break;
+
+      case "sepia":
+        // 怀旧：复古棕色调
+        {
+          const tr = 0.393 * r + 0.769 * g + 0.189 * b;
+          const tg = 0.349 * r + 0.686 * g + 0.168 * b;
+          const tb = 0.272 * r + 0.534 * g + 0.131 * b;
+          r = Math.min(255, Math.round(tr));
+          g = Math.min(255, Math.round(tg));
+          b = Math.min(255, Math.round(tb));
+        }
+        break;
+    }
+
+    data[i] = Math.max(0, Math.min(255, r));
+    data[i + 1] = Math.max(0, Math.min(255, g));
+    data[i + 2] = Math.max(0, Math.min(255, b));
+  }
+
+  return new ImageData(data, width, height);
+}
 
 // --- 核心像素化计算逻辑 ---
 
@@ -208,6 +313,7 @@ function calculateCellRepresentativeColor(
  * @param palette 当前使用的调色板
  * @param mode 像素化模式 (Dominant/Average)
  * @param t1FallbackColor T1 或其他备用颜色数据
+ * @param filter 可选：在像素化前对图像应用滤镜
  * @returns 计算后的 MappedPixel 网格数据
  */
 export function calculatePixelGrid(
@@ -218,9 +324,10 @@ export function calculatePixelGrid(
     M: number,
     palette: PaletteColor[],
     mode: PixelationMode,
-    t1FallbackColor: PaletteColor // 传入备用色
+    t1FallbackColor: PaletteColor, // 传入备用色
+    filter?: ImageFilter, // 新增可选参数
 ): MappedPixel[][] {
-    console.log(`Calculating pixel grid with mode: ${mode}`);
+    console.log(`Calculating pixel grid with mode: ${mode}${filter && filter !== "none" ? `, filter: ${filter}` : ""}`);
     const mappedData: MappedPixel[][] = Array(M).fill(null).map(() => Array(N).fill({ key: t1FallbackColor.key, color: t1FallbackColor.hex }));
     const cellWidthOriginal = imgWidth / N;
     const cellHeightOriginal = imgHeight / M;
@@ -232,6 +339,11 @@ export function calculatePixelGrid(
         console.error("Failed to get full image data:", e);
         // 如果无法获取图像数据，返回一个空的或默认的网格
         return mappedData;
+    }
+
+    // 如果指定了滤镜，在像素化之前应用滤镜到图像数据
+    if (filter && filter !== "none" && fullImageData) {
+        fullImageData = applyImageFilter(fullImageData, filter);
     }
 
     for (let j = 0; j < M; j++) {

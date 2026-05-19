@@ -22,7 +22,7 @@ import {
   renderSampleDesignOriginal,
   type BeadPattern,
 } from "@/utils/culturePattern";
-import { colorSystemOptions, type ColorSystem, getDisplayColorKey, getAllHexValues, sortColorsByHue } from "@/utils/colorSystemUtils";
+import { getDisplayColorKey, getAllHexValues, sortColorsByHue } from "@/utils/colorSystemUtils";
 
 type TabId = "config" | "extract" | "pattern" | "preview";
 
@@ -54,7 +54,6 @@ export default function FourPageApp() {
   const [aiCopy, setAiCopy] = useState<CultureCopy | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedColorSystem, setSelectedColorSystem] = useState<ColorSystem>("heritage");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [forcedColors, setForcedColors] = useState<string[]>([]);
 
@@ -63,10 +62,10 @@ export default function FourPageApp() {
     const allHexValues = getAllHexValues();
     const colors = allHexValues.map(hex => ({
       color: hex,
-      key: getDisplayColorKey(hex, selectedColorSystem),
+      key: getDisplayColorKey(hex),
     }));
     return sortColorsByHue(colors);
-  }, [selectedColorSystem]);
+  }, []);
 
   // 强制颜色警告：如果指定颜色数超过 colorCount
   const forcedColorWarning = useMemo(() => {
@@ -172,7 +171,7 @@ export default function FourPageApp() {
     };
   }, [aspectRatio, extractedImageKey, pattern, patternUrl, productId, abortSceneRequest]);
 
-  const beadCounts = useMemo(() => (pattern ? countBeads(pattern.grid, selectedColorSystem) : []), [pattern, selectedColorSystem]);
+  const beadCounts = useMemo(() => (pattern ? countBeads(pattern.grid) : []), [pattern]);
 
   const copy = useMemo(() => {
     if (aiCopy) return aiCopy;
@@ -212,7 +211,7 @@ export default function FourPageApp() {
       setExtractedImageUrl(result.imageUrl);
       setProductSceneUrl(null);
       setPattern(next);
-      const nextCopy = await requestAiCopy(result.imageUrl, countBeads(next.grid, "heritage"));
+      const nextCopy = await requestAiCopy(result.imageUrl, countBeads(next.grid));
       setAiCopy(nextCopy);
       setActiveTab("pattern");
     } catch (err) {
@@ -246,7 +245,7 @@ export default function FourPageApp() {
           preserveSourceRatio: false,
         }, forcedColors);
         setPattern(next);
-        const nextCopy = await requestAiCopy(extractResult.imageUrl, countBeads(next.grid, "heritage"));
+        const nextCopy = await requestAiCopy(extractResult.imageUrl, countBeads(next.grid));
         setAiCopy(nextCopy);
         setError(null);
         setActiveTab("extract");
@@ -264,18 +263,12 @@ export default function FourPageApp() {
   // --- Right Sidebar Content ---
   const sidebarContent = (
     <div className="space-y-4">
-      {/* 颜色滤镜选择 */}
+      {/* 颜色系统显示 - 当前仅支持传统色号 */}
       <div>
-        <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">颜色滤镜</label>
-        <select
-          value={selectedColorSystem}
-          onChange={(e) => setSelectedColorSystem(e.target.value as ColorSystem)}
-          className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
-        >
-          {colorSystemOptions.map((opt) => (
-            <option key={opt.key} value={opt.key}>{opt.name}</option>
-          ))}
-        </select>
+        <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">色号系统</label>
+        <div className="mt-1 w-full rounded-md border border-slate-300 bg-gray-100 px-2 py-1.5 text-sm text-gray-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400">
+          传统色号 (唯一)
+        </div>
       </div>
 
       {/* 显示网格 */}
@@ -371,7 +364,7 @@ export default function FourPageApp() {
                   onClick={() => setForcedColors(prev => prev.filter(h => h !== hex))}
                   className="group relative inline-flex h-7 w-7 items-center justify-center rounded-lg border-2 border-blue-500 shadow-sm hover:border-red-400"
                   style={{ backgroundColor: hex }}
-                  title={`移除 ${getDisplayColorKey(hex, selectedColorSystem)}`}
+                  title={`移除 ${getDisplayColorKey(hex)}`}
                 >
                   {/* 选择序号标注 */}
                   <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-white/90 px-0.5 text-[8px] font-bold text-slate-700 shadow ring-1 ring-slate-300">
