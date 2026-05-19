@@ -1671,28 +1671,31 @@ export default function CreativeBeadStudio() {
             <div className="mx-auto max-w-7xl px-4 pb-8 pt-14 sm:px-6 lg:px-8">
               <p className="text-sm font-semibold text-[#f2c46d]">千年纹样 × 掌间拼豆</p>
 
-              {/* 打字机标题 */}
-              <h1 className="mt-3 min-h-[1em] max-w-4xl whitespace-nowrap text-2xl font-semibold leading-tight tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
-                {typedLine1}
-                {typedLine1.length > 0 && typedLine1.length < homeTypingLine1.length && (
-                  <span className="inline-block w-[2px] h-[0.8em] bg-[#f2c46d] ml-0.5 animate-pulse align-middle" />
-                )}
-              </h1>
+              {/* 打字区域固定容器：防止打字时高度变化导致下方元素下移 */}
+              <div className="min-h-[200px] md:min-h-[220px] lg:min-h-[260px]">
+                {/* 打字机标题 */}
+                <h1 className="mt-3 max-w-4xl whitespace-nowrap text-2xl font-semibold leading-tight tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
+                  {typedLine1}
+                  {typedLine1.length > 0 && typedLine1.length < homeTypingLine1.length && (
+                    <span className="inline-block w-[2px] h-[0.8em] bg-[#f2c46d] ml-0.5 animate-pulse align-middle" />
+                  )}
+                </h1>
 
-              {/* 打字机描述 */}
-              <p className="mt-5 min-h-[1.5em] max-w-2xl text-base leading-7 text-stone-200">
-                {typedLine2}
-                {typedLine2.length > 0 && typedLine2.length < homeTypingLine2.length && (
-                  <span className="inline-block w-[2px] h-[1em] bg-[#f2c46d] ml-0.5 animate-pulse align-middle" />
-                )}
-              </p>
+                {/* 打字机描述 */}
+                <p className="mt-5 max-w-2xl text-base leading-7 text-stone-200">
+                  {typedLine2}
+                  {typedLine2.length > 0 && typedLine2.length < homeTypingLine2.length && (
+                    <span className="inline-block w-[2px] h-[1em] bg-[#f2c46d] ml-0.5 animate-pulse align-middle" />
+                  )}
+                </p>
 
-              {/* 打字完成后浮现快速开始按钮 */}
-              <div className={`transition-all duration-700 ${typingDone ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6 pointer-events-none"}`}>
-                <div className="mt-7 flex flex-wrap gap-4">
-                  <button type="button" onClick={() => setView("start")} className="rounded-md bg-[#f2c46d] px-8 py-4 text-base font-bold text-stone-950 shadow-lg transition hover:bg-[#f4d07a] hover:shadow-xl">
-                    🚀 快速开始
-                  </button>
+                {/* 打字完成后浮现快速开始按钮 */}
+                <div className={`transition-all duration-700 ${typingDone ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6 pointer-events-none"}`}>
+                  <div className="mt-7 flex flex-wrap gap-4">
+                    <button type="button" onClick={() => setView("start")} className="rounded-md bg-[#f2c46d] px-8 py-4 text-base font-bold text-stone-950 shadow-lg transition hover:bg-[#f4d07a] hover:shadow-xl">
+                      🚀 快速开始
+                    </button>
+                  </div>
                 </div>
               </div>
               {/* 纹样滚动带 — 始终展示 */}
