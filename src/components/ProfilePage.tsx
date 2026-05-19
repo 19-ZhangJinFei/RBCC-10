@@ -10,11 +10,13 @@ import {
   deleteProjectRecord,
   deleteProjectRecords,
   loadCurrentUserProfile,
+  loadCurrentUser,
   updateCurrentUserProfile,
   logoutUser,
   type StoredUser,
 } from "@/utils/profileStorage";
 import AvatarCropper from "@/components/AvatarCropper";
+import LoginModal from "@/components/LoginModal";
 
 type Props = {
   onBack: () => void;
@@ -39,6 +41,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout }: Prop
   const [history, setHistory] = useState(() => loadProjectHistory());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchMode, setBatchMode] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -142,8 +145,14 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout }: Prop
     }
   }, []);
 
+  const isLoggedIn = !!loadCurrentUser();
   const currentTextOption = TEXT_MODEL_OPTIONS.find(m => m.name === apiConfig.textModelName);
   const currentImageOption = IMAGE_MODEL_OPTIONS.find(m => m.name === apiConfig.imageModelName);
+
+  const handleLoggedIn = useCallback((user: StoredUser) => {
+    setProfile(user);
+    setShowLoginModal(false);
+  }, []);
 
   return (
     <main className="min-h-screen bg-[#f8f5ef] text-stone-950">
@@ -382,23 +391,40 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout }: Prop
           )}
         </section>
 
-        {/* 登出 */}
+        {/* 账号设置 */}
         <section className="rounded-lg border border-red-100 bg-white p-6">
           <h2 className="text-xl font-semibold text-stone-800">账号设置</h2>
-          <p className="mt-1 text-sm text-stone-500">登出后将不再显示与该账号有关的信息，本地未保存的作品不会被删除。</p>
-          <button
-            type="button"
-            onClick={() => {
-              logoutUser();
-              saveApiConfig({ textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "" });
-              setProfile({ nickname: "", avatarUrl: "", createdAt: Date.now() });
-              setApiConfig({ textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "" });
-              onLogout?.();
-            }}
-            className="mt-4 rounded-md border border-red-300 bg-red-50 px-5 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100"
-          >
-            退出登录
-          </button>
+          {isLoggedIn ? (
+            <>
+              <p className="mt-1 text-sm text-stone-500">登出后将不再显示与该账号有关的信息，本地未保存的作品不会被删除。</p>
+              <button
+                type="button"
+                onClick={() => {
+                  logoutUser();
+                  saveApiConfig({ textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "" });
+                  setProfile({ nickname: "豆韵用户", avatarUrl: "", createdAt: Date.now() });
+                  setApiConfig({ textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "" });
+                  onLogout?.();
+                }}
+                className="mt-4 rounded-md border border-red-300 bg-red-50 px-5 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100"
+              >
+                退出登录
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="mt-1 text-sm text-stone-500">登录后可同步作品进度和个性化设置到本设备。</p>
+              <div className="mt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowLoginModal(true)}
+                  className="rounded-md bg-[#8f1d21] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#a52327]"
+                >
+                  登录 / 注册
+                </button>
+              </div>
+            </>
+          )}
         </section>
       </div>
 
@@ -407,6 +433,13 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout }: Prop
           file={cropperFile}
           onSave={handleCropperSave}
           onCancel={() => setCropperFile(null)}
+        />
+      )}
+
+      {showLoginModal && (
+        <LoginModal
+          onClose={() => setShowLoginModal(false)}
+          onLoggedIn={handleLoggedIn}
         />
       )}
     </main>
