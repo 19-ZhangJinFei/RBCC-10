@@ -24,6 +24,7 @@ import {
   type BeadPattern,
 } from "@/utils/culturePattern";
 import { generateCultureCopy } from "@/utils/cultureTextGenerator";
+import { analyzeSubjectImage } from "@/utils/subjectAnalysis";
 import {
   getAllHexValues,
   getDisplayColorKey,
@@ -636,6 +637,7 @@ export default function CreativeBeadStudio() {
   const [showAiChat, setShowAiChat] = useState(false);
   const [extractPrompt, setExtractPrompt] = useState<string | null>(null);
   const [scenePrompt, setScenePrompt] = useState<string | null>(null);
+  const [subjectColorSummary, setSubjectColorSummary] = useState<string | null>(null);
 
   // 首页打字机动画状态
   const homeTypingLine1 = "方寸之间，粒粒皆可触摸的东方诗篇";
@@ -705,6 +707,7 @@ export default function CreativeBeadStudio() {
     const original = renderSampleDesignOriginal(options);
     setSourceImageUrl(original);
     setExtractedImageUrl(original);
+    setSubjectColorSummary(null);
     setShowMatting(false);
     setError(null);
     setConfirmNew(null);
@@ -723,11 +726,18 @@ export default function CreativeBeadStudio() {
         reader.readAsDataURL(file);
       });
       setSourceImageUrl(imageUrl);
-      // 只替换源头图像，不动之前生成的 pattern/scene
+      const analysis = await analyzeSubjectImage(imageUrl);
+      setSubjectColorSummary(analysis.colorSummary);
       const response = await fetch("/api/extract-theme-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl, isUpload: true, ...options }),
+        body: JSON.stringify({
+          imageUrl: analysis.subjectImageUrl,
+          isUpload: true,
+          colorSummary: analysis.colorSummary,
+          colors: analysis.colors,
+          ...options,
+        }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result?.error ?? "主体提取失败");
@@ -771,6 +781,7 @@ export default function CreativeBeadStudio() {
     setCleanPatternUrl(null);
     setProductSceneUrl(null);
     setMockupUrl(null);
+    setSubjectColorSummary(null);
   };
 
   const buildPatternFromExtracted = async () => {
@@ -842,6 +853,7 @@ export default function CreativeBeadStudio() {
       setSourceImageUrl(result.imageUrl);
       setExtractedImageUrl(result.imageUrl);
       setExtractPrompt(result.prompt);
+      setSubjectColorSummary(null);
       clearPatternArtifacts();
       setShowMatting(false);
       setStep("extract");
@@ -861,10 +873,18 @@ export default function CreativeBeadStudio() {
       try {
         const imageUrl = String(reader.result);
         setSourceImageUrl(imageUrl);
+        const analysis = await analyzeSubjectImage(imageUrl);
+        setSubjectColorSummary(analysis.colorSummary);
         const response = await fetch("/api/extract-theme-image", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageUrl, isUpload: true, ...options }),
+          body: JSON.stringify({
+            imageUrl: analysis.subjectImageUrl,
+            isUpload: true,
+            colorSummary: analysis.colorSummary,
+            colors: analysis.colors,
+            ...options,
+          }),
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result?.error ?? "主体提取失败");
@@ -886,10 +906,18 @@ export default function CreativeBeadStudio() {
     setLoading(true);
     setError(null);
     try {
+      const analysis = await analyzeSubjectImage(resultImageUrl);
+      setSubjectColorSummary(analysis.colorSummary);
       const response = await fetch("/api/extract-theme-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl: resultImageUrl, isUpload: true, ...options }),
+        body: JSON.stringify({
+          imageUrl: analysis.subjectImageUrl,
+          isUpload: true,
+          colorSummary: analysis.colorSummary,
+          colors: analysis.colors,
+          ...options,
+        }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result?.error ?? "主体提取失败");
@@ -1203,7 +1231,13 @@ export default function CreativeBeadStudio() {
             )}
             <section className="rounded-lg border border-stone-200 bg-white p-5">
               <h2 className="text-xl font-semibold">✂️ 主体提取与再创作</h2>
-              <p className="mt-1 text-sm text-stone-500">提取图片核心主体意象后，分析其颜色组成和比例，严格按照原配色进行传统文化风格再创作；接下来在第三阶段（拼豆图纸）进行像素化处理。</p>
+              <p className="mt-1 text-sm text-stone-500">由本地算法提取图片核心主体并计算主体颜色组成，AI 只根据计算结果进行传统文化风格再创作；接下来在第三阶段（拼豆图纸）进行像素化处理。</p>
+              {subjectColorSummary && (
+                <div className="mt-3 rounded-md border border-stone-200 bg-stone-50 p-3">
+                  <p className="text-xs font-semibold text-stone-600">主体颜色占比（代码计算）</p>
+                  <pre className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-stone-600">{subjectColorSummary}</pre>
+                </div>
+              )}
               <div className="mt-4">{renderImageBox(extractedImageUrl, "主体素材")}</div>
               <div className="mt-4 flex flex-wrap gap-3">
                 {sourceImageUrl && (
@@ -1547,6 +1581,7 @@ export default function CreativeBeadStudio() {
     setCleanPatternUrl(record.cleanPatternUrl);
     setMockupUrl(record.mockupUrl);
     setProductSceneUrl(record.productSceneUrl);
+    setSubjectColorSummary(null);
 
     // 恢复 pattern 对象
     if (record.patternData) {
