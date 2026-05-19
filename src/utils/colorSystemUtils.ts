@@ -9,15 +9,15 @@ export const DEFAULT_COLOR_SYSTEM: ColorSystem = "heritage";
 /** 图像滤镜选项 */
 export type ImageFilter = "none" | "contrast" | "vibrant" | "pastel" | "warm" | "cool" | "grayscale" | "sepia";
 
-export const IMAGE_FILTER_OPTIONS: { key: ImageFilter; icon: string; name: string; desc: string }[] = [
-  { key: "none", icon: "🎨", name: "无滤镜", desc: "保持原始色彩" },
-  { key: "contrast", icon: "✨", name: "高对比", desc: "增强色块边界，适合轮廓清晰的设计" },
-  { key: "vibrant", icon: "🌈", name: "鲜艳", desc: "提高色彩饱和度，成品更艳丽" },
-  { key: "pastel", icon: "🌸", name: "柔和", desc: "降低饱和度并提亮，效果更温柔" },
-  { key: "warm", icon: "🔥", name: "暖色调", desc: "增强红橙色调，画面更温暖" },
-  { key: "cool", icon: "❄️", name: "冷色调", desc: "增强蓝紫色调，画面更清冷" },
-  { key: "grayscale", icon: "⚪", name: "灰度", desc: "去色后映射，灰度深浅决定拼豆颜色" },
-  { key: "sepia", icon: "📜", name: "怀旧", desc: "复古棕色调，适合古风主题" },
+export const IMAGE_FILTER_OPTIONS: { key: ImageFilter; name: string; desc: string }[] = [
+  { key: "none", name: "无滤镜", desc: "保持原始色彩" },
+  { key: "contrast", name: "高对比", desc: "增强色块边界，适合轮廓清晰的设计" },
+  { key: "vibrant", name: "鲜艳", desc: "提高色彩饱和度，成品更艳丽" },
+  { key: "pastel", name: "柔和", desc: "降低饱和度并提亮，效果更温柔" },
+  { key: "warm", name: "暖色调", desc: "增强红橙色调，画面更温暖" },
+  { key: "cool", name: "冷色调", desc: "增强蓝紫色调，画面更清冷" },
+  { key: "grayscale", name: "灰度", desc: "去色后映射，灰度深浅决定拼豆颜色" },
+  { key: "sepia", name: "怀旧", desc: "复古棕色调，适合古风主题" },
 ];
 
 // 保持向后兼容

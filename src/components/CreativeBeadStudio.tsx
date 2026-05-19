@@ -46,11 +46,11 @@ type StudioStep = "config" | "extract" | "pattern" | "preview";
   { id: "faq", label: "帮助" },
 ];
 
-const studioSteps: { id: StudioStep; label: string; desc: string; icon: string }[] = [
-  { id: "config", label: "配置", desc: "选择传统主题、作品形式、网格尺寸、颜色数量和可用色", icon: "⚙️" },
-  { id: "extract", label: "主体提取与再创作", desc: "提取图片核心主体意象，分析颜色组成后按原配色进行文化风格再创作（支持重新提取）", icon: "✂️" },
-  { id: "pattern", label: "拼豆图纸", desc: "像素化处理、自动移除轮廓外浅色杂块以节省拼豆用量、生成带色号网格并统计用量", icon: "🧩" },
-  { id: "preview", label: "场景预览", desc: "基于拼豆图纸生成真实拼豆成品场景预览、查看文化说明并导出完整制作资料", icon: "🖼️" },
+const studioSteps: { id: StudioStep; label: string; desc: string }[] = [
+  { id: "config", label: "配置", desc: "选择传统主题、作品形式、网格尺寸、颜色数量和可用色" },
+  { id: "extract", label: "主体提取与再创作", desc: "提取图片核心主体意象，分析颜色组成后按原配色进行文化风格再创作（支持重新提取）" },
+  { id: "pattern", label: "拼豆图纸", desc: "像素化处理、自动移除轮廓外浅色杂块以节省拼豆用量、生成带色号网格并统计用量" },
+  { id: "preview", label: "场景预览", desc: "基于拼豆图纸生成真实拼豆成品场景预览、查看文化说明并导出完整制作资料" },
 ];
 
 const formLabels = [
@@ -963,7 +963,7 @@ export default function CreativeBeadStudio() {
       return (
         <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
           <section className="rounded-lg border border-stone-200 bg-white p-5">
-            <h2 className="text-xl font-semibold">⚙️ 配置传统文化拼豆方案</h2>
+            <h2 className="text-xl font-semibold">配置传统文化拼豆方案</h2>
             <p className="mt-1 text-sm leading-6 text-stone-500">选择主题、核心元素、叙述、作品形式、比例与网格参数。</p>
             {error && <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
             <div className="mt-5 grid gap-4">
@@ -1073,7 +1073,7 @@ export default function CreativeBeadStudio() {
           </section>
 
           <section className="rounded-lg border border-stone-200 bg-white p-5">
-            <h2 className="text-xl font-semibold">🎨 调色板</h2>
+            <h2 className="text-xl font-semibold">调色板</h2>
             <p className="mt-1 text-sm leading-6 text-stone-500">按色系筛选可用颜色，点击选择要纳入最终色表的颜色，已选颜色会标注选择顺序。</p>
             {forcedColorWarning && <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">{forcedColorWarning}</div>}
             {/* 色系分类菜单 */}
@@ -1182,7 +1182,7 @@ export default function CreativeBeadStudio() {
             {extractedImageUrl && (
               <section className="rounded-lg border border-stone-200 bg-white p-5">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold">🤖 当前 AI 提示词</h2>
+                  <h2 className="text-xl font-semibold">当前 AI 提示词</h2>
                 </div>
                 <div className="mt-3 max-h-40 overflow-y-auto rounded-md bg-stone-50 p-3 text-xs leading-relaxed text-stone-600 font-mono whitespace-pre-wrap">
                   {extractPrompt || "无"}
@@ -1190,7 +1190,7 @@ export default function CreativeBeadStudio() {
               </section>
             )}
             <section className="rounded-lg border border-stone-200 bg-white p-5">
-              <h2 className="text-xl font-semibold">✂️ 主体提取与再创作</h2>
+              <h2 className="text-xl font-semibold">主体提取与再创作</h2>
               <p className="mt-1 text-sm text-stone-500">由本地算法提取图片核心主体并计算主体颜色组成，AI 只根据计算结果进行传统文化风格再创作；接下来在第三阶段（拼豆图纸）进行像素化处理。</p>
               <div className="mt-4">{renderImageBox(extractedImageUrl, "AI 再创作图像")}</div>
               <div className="mt-4 flex flex-wrap gap-3">
@@ -1268,7 +1268,7 @@ export default function CreativeBeadStudio() {
           <section className="rounded-lg border border-stone-200 bg-white p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-xl font-semibold">🧩 拼豆图纸</h2>
+                <h2 className="text-xl font-semibold">拼豆图纸</h2>
                 <p className="mt-1 text-sm text-stone-500">当前使用开源传统色号标注，不包含外部供应专属字段。</p>
               </div>
               <div className="flex gap-2">
@@ -1293,7 +1293,7 @@ export default function CreativeBeadStudio() {
                         : 'bg-white text-stone-700 border border-stone-300 hover:bg-stone-100'
                     }`}
                   >
-                    {isPainting ? '🎨 编辑中' : '✏️ 点击编辑'}
+                    {isPainting ? '编辑中' : '点击编辑'}
                   </button>
                   {isPainting && (
                     <span className="text-xs text-stone-500 ml-1">
@@ -1356,7 +1356,7 @@ export default function CreativeBeadStudio() {
 
           <div className="flex flex-col gap-6 overflow-y-auto">
           <section className="rounded-lg border border-stone-200 bg-white p-5">
-            <h2 className="text-xl font-semibold">📊 用量统计</h2>
+            <h2 className="text-xl font-semibold">用量统计</h2>
             <div className="mt-3 grid grid-cols-3 gap-2 text-center">
               <div className="rounded-md bg-stone-100 p-3">
                 <p className="text-xs text-stone-500">总颗数</p>
@@ -1399,7 +1399,7 @@ export default function CreativeBeadStudio() {
           </section>
 
           <section className="rounded-lg border border-stone-200 bg-white p-5">
-            <h2 className="text-xl font-semibold">⚙️ 当前配置</h2>
+            <h2 className="text-xl font-semibold">当前配置</h2>
             <p className="mt-1 text-sm leading-6 text-stone-500">可在此直接调整参数，图纸将实时刷新。</p>
             <div className="mt-3 grid gap-3">
               <label className="text-sm font-medium">
@@ -1463,7 +1463,7 @@ export default function CreativeBeadStudio() {
         <section className="rounded-lg border border-stone-200 bg-white p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-semibold">🎨 成品场景预览</h2>
+              <h2 className="text-xl font-semibold">成品场景预览</h2>
               <p className="mt-1 text-sm text-stone-500">查看拼豆图纸在 {formLabel} 上的效果，可生成更完整的场景图。</p>
             </div>
             <button type="button" onClick={generateScene} disabled={!patternUrl || sceneLoading} className="rounded-md bg-[#8f1d21] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
@@ -1484,18 +1484,18 @@ export default function CreativeBeadStudio() {
         <section className="space-y-5">
           <div className="rounded-lg border border-stone-200 bg-white p-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">🤖 当前 AI 提示词</h2>
+              <h2 className="text-xl font-semibold">当前 AI 提示词</h2>
             </div>
             <div className="mt-3 max-h-40 overflow-y-auto rounded-md bg-stone-50 p-3 text-xs leading-relaxed text-stone-600 font-mono whitespace-pre-wrap">
               {scenePrompt || "无"}
             </div>
           </div>
           <div className="rounded-lg border border-stone-200 bg-white p-5">
-            <h2 className="mb-3 text-xl font-semibold">📤 导出作品资料</h2>
+            <h2 className="mb-3 text-xl font-semibold">导出作品资料</h2>
             <ExportPanel title={copy.title} patternUrl={patternUrl} mockupUrl={mockupUrl} copy={copy} beadCounts={beadCounts} />
           </div>
           <div className="rounded-lg border border-stone-200 bg-white p-5">
-            <h2 className="mb-3 text-xl font-semibold">📖 文化说明</h2>
+            <h2 className="mb-3 text-xl font-semibold">文化说明</h2>
             <CultureExplanation copy={copy} />
           </div>
         </section>

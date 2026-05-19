@@ -26,11 +26,11 @@ import { getDisplayColorKey, getAllHexValues, sortColorsByHue } from "@/utils/co
 
 type TabId = "config" | "extract" | "pattern" | "preview";
 
-const TABS: { id: TabId; label: string; icon: string }[] = [
-  { id: "config", label: "配置", icon: "⚙️" },
-  { id: "extract", label: "主体提取与再创作", icon: "✂️" },
-  { id: "pattern", label: "拼豆图纸", icon: "🧩" },
-  { id: "preview", label: "场景预览", icon: "🖼️" },
+const TABS: { id: TabId; label: string }[] = [
+  { id: "config", label: "配置" },
+  { id: "extract", label: "主体提取与再创作" },
+  { id: "pattern", label: "拼豆图纸" },
+  { id: "preview", label: "场景预览" },
 ];
 
 export default function FourPageApp() {
@@ -71,7 +71,7 @@ export default function FourPageApp() {
   const forcedColorWarning = useMemo(() => {
     if (forcedColors.length === 0) return null;
     if (forcedColors.length > colorCount) {
-      return `⚠️ 你指定了 ${forcedColors.length} 种颜色，但当前颜色数量上限为 ${colorCount} 种。超出的 ${forcedColors.length - colorCount} 种颜色将被忽略。请减少指定颜色或增加颜色数量上限。`;
+      return `你指定了 ${forcedColors.length} 种颜色，但当前颜色数量上限为 ${colorCount} 种。超出的 ${forcedColors.length - colorCount} 种颜色将被忽略。请减少指定颜色或增加颜色数量上限。`;
     }
     return null;
   }, [forcedColors, colorCount]);
@@ -370,9 +370,7 @@ export default function FourPageApp() {
                   <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-white/90 px-0.5 text-[8px] font-bold text-slate-700 shadow ring-1 ring-slate-300">
                     {idx + 1}
                   </span>
-                  <svg className="hidden h-3 w-3 text-red-500 group-hover:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <span className="hidden rounded bg-white/90 px-1 text-[8px] font-semibold text-red-600 group-hover:block">移除</span>
                 </button>
               ))}
               <hr className="w-full border-slate-100" />
@@ -640,8 +638,7 @@ export default function FourPageApp() {
                         : "bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400"
                   }`}
                 >
-                  <span className="text-xs">{tab.icon}</span>
-                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span>{tab.label}</span>
                 </button>
               ))}
             </div>
@@ -665,9 +662,9 @@ export default function FourPageApp() {
               {/* Sidebar toggle */}
               <button
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="absolute -left-3 top-4 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-xs text-slate-500 shadow-sm hover:text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                className="absolute -left-8 top-4 flex h-6 min-w-12 items-center justify-center rounded-full border border-slate-200 bg-white px-2 text-xs text-slate-500 shadow-sm hover:text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400"
               >
-                {sidebarCollapsed ? "◀" : "▶"}
+                {sidebarCollapsed ? "展开" : "收起"}
               </button>
 
               <div className="mb-3 flex items-center justify-between">
@@ -691,7 +688,6 @@ export default function FourPageApp() {
                     : "text-slate-500"
                 }`}
               >
-                <span className="text-lg">{tab.icon}</span>
                 <span>{tab.label}</span>
               </button>
             ))}

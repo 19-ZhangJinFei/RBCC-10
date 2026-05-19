@@ -56,17 +56,13 @@ export default function FilterDropdown({ value, onChange }: Props) {
 
   return (
     <div ref={ref} className="relative" title={selected.name}>
-      {/* 按钮显示图标 + 名称 */}
+      {/* 按钮显示名称 */}
       <button
         type="button"
         onClick={handleToggle}
         className="flex items-center gap-1.5 rounded-md border border-stone-300 bg-white px-2.5 py-1.5 text-sm hover:bg-stone-50 transition whitespace-nowrap"
       >
-        <span className="text-base leading-none">{selected.icon}</span>
         <span className="text-stone-700">{selected.name}</span>
-        <svg className={`h-3.5 w-3.5 text-stone-400 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
       </button>
 
       {/* 自定义下拉菜单 */}
@@ -94,13 +90,8 @@ export default function FilterDropdown({ value, onChange }: Props) {
                     : "text-stone-600 hover:bg-stone-50 hover:text-stone-900"
                 }`}
               >
-                <span className="text-base">{f.icon}</span>
                 <span className="flex-1">{f.name}</span>
-                {f.key === value && (
-                  <svg className="h-4 w-4 text-[#8f1d21]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
+                {f.key === value && <span className="text-xs text-[#8f1d21]">已选</span>}
               </button>
             ))}
           </div>
