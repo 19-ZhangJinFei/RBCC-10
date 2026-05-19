@@ -33,12 +33,10 @@ export default function AvatarCropper({ file, onSave, onCancel }: Props) {
     return () => URL.revokeObjectURL(objectUrl);
   }, [file]);
 
-  // 实际显示尺寸 = 基础缩放 × 缩放倍数
   const displayScale = baseScaleRef.current * zoom;
   const displayW = image ? image.naturalWidth * displayScale : 0;
   const displayH = image ? image.naturalHeight * displayScale : 0;
 
-  /* ── 鼠标事件 ── */
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
     setZoom((z) => {
@@ -67,7 +65,6 @@ export default function AvatarCropper({ file, onSave, onCancel }: Props) {
     [isDragging, dragStart]
   );
 
-  /* ── 触摸事件 ── */
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
       if (e.touches.length !== 1) return;
@@ -95,7 +92,6 @@ export default function AvatarCropper({ file, onSave, onCancel }: Props) {
 
   const stopDragging = useCallback(() => setIsDragging(false), []);
 
-  /* ── 保存裁剪结果 ── */
   const handleSave = useCallback(() => {
     if (!image) return;
 
@@ -106,21 +102,16 @@ export default function AvatarCropper({ file, onSave, onCancel }: Props) {
     canvas.width = CROP_SIZE;
     canvas.height = CROP_SIZE;
 
-    // 图片在容器中的位置
     const imgLeft = (CONTAINER_SIZE - displayW) / 2 + offset.x;
     const imgTop = (CONTAINER_SIZE - displayH) / 2 + offset.y;
-
-    // 裁剪框位置（居中）
     const cropLeft = (CONTAINER_SIZE - CROP_SIZE) / 2;
     const cropTop = (CONTAINER_SIZE - CROP_SIZE) / 2;
 
-    // 反向映射到原始图片坐标
     const sx = ((cropLeft - imgLeft) / displayW) * image.naturalWidth;
     const sy = ((cropTop - imgTop) / displayH) * image.naturalHeight;
     const sw = (CROP_SIZE / displayW) * image.naturalWidth;
     const sh = (CROP_SIZE / displayH) * image.naturalHeight;
 
-    // 用白色背景填充（防止透明区域）
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, CROP_SIZE, CROP_SIZE);
     ctx.drawImage(image, sx, sy, sw, sh, 0, 0, CROP_SIZE, CROP_SIZE);
@@ -136,13 +127,11 @@ export default function AvatarCropper({ file, onSave, onCancel }: Props) {
       onTouchEnd={stopDragging}
     >
       <div className="mx-4 w-full max-w-sm rounded-xl bg-white p-5 shadow-2xl">
-        {/* 标题 */}
         <h3 className="text-center text-lg font-semibold">裁剪头像</h3>
         <p className="mt-1 text-center text-xs text-stone-500">
           拖动调整位置，滚轮或滑块缩放
         </p>
 
-        {/* 裁剪区域 */}
         <div
           className={`relative mx-auto mt-4 h-[300px] w-[300px] select-none overflow-hidden rounded-lg bg-[repeating-conic-gradient(#e5e7eb_0%_25%,#fff_0%_50%)_0_0_/_20px_20px] ${
             isDragging ? "cursor-grabbing" : "cursor-grab"
@@ -171,7 +160,6 @@ export default function AvatarCropper({ file, onSave, onCancel }: Props) {
             />
           )}
 
-          {/* 半透明遮罩（圆形裁剪区域透明） */}
           <div
             className="pointer-events-none absolute inset-0"
             style={{
@@ -180,7 +168,6 @@ export default function AvatarCropper({ file, onSave, onCancel }: Props) {
             }}
           />
 
-          {/* 裁剪框白边 */}
           <div
             className="pointer-events-none absolute rounded-full border-[3px] border-white"
             style={{
@@ -193,7 +180,6 @@ export default function AvatarCropper({ file, onSave, onCancel }: Props) {
           />
         </div>
 
-        {/* 缩放滑块 */}
         <div className="mt-4 flex items-center gap-3">
           <span className="text-xs font-medium text-stone-400">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -216,7 +202,6 @@ export default function AvatarCropper({ file, onSave, onCancel }: Props) {
           </span>
         </div>
 
-        {/* 操作按钮 */}
         <div className="mt-5 flex gap-3">
           <button
             type="button"
