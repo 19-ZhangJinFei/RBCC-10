@@ -14,6 +14,7 @@ type Props = {
   imageUrl: string | null;
   loading?: boolean;
   autoDetect?: boolean;
+  showHeader?: boolean;
   mode?: MaskMode;
   savedMask?: SubjectMask | null;
   onSubjectChange: (analysis: SubjectAnalysis) => void;
@@ -46,6 +47,7 @@ export default function SubjectMaskEditor({
   imageUrl,
   loading,
   autoDetect = true,
+  showHeader = true,
   mode,
   savedMask,
   onSubjectChange,
@@ -266,12 +268,14 @@ export default function SubjectMaskEditor({
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-semibold">交互式主体识别</h2>
-          <p className="mt-1 text-sm text-stone-500">
-            请点击图像中的主体。绿色蒙版表示将进入拼豆化的主体范围；识别不准时，可切换增加或减少并用画笔修正。
-          </p>
-        </div>
+        {showHeader ? (
+          <div>
+            <h2 className="text-xl font-semibold">交互式主体识别</h2>
+            <p className="mt-1 text-sm text-stone-500">
+              请点击图像中的主体。绿色蒙版表示将进入拼豆化的主体范围；识别不准时，可切换增加或减少并用画笔修正。
+            </p>
+          </div>
+        ) : <div />}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex overflow-hidden rounded-md border border-stone-300">
             {[

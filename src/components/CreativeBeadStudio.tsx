@@ -1387,6 +1387,12 @@ export default function CreativeBeadStudio() {
       return (
         <div className="grid gap-6 lg:grid-cols-2">
           <section className="rounded-lg border border-stone-200 bg-white p-5">
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold">原图</h2>
+              <p className="mt-1 text-sm text-stone-500">
+                交互式主体识别：请点击图像中的主体。绿色蒙版表示将进入拼豆化的主体范围；识别不准时，可切换增加或减少并用画笔修正。
+              </p>
+            </div>
             <SubjectMaskEditor
               imageUrl={sourceImageUrl}
               loading={loading}
@@ -1444,37 +1450,13 @@ export default function CreativeBeadStudio() {
               </section>
             )}
             <section className="rounded-lg border border-stone-200 bg-white p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-xl font-semibold">创作结果</h2>
-                <div className="flex overflow-hidden rounded-md border border-stone-300">
-                  {[
-                    { id: "select", label: "鼠标" },
-                    { id: "add", label: "增加" },
-                    { id: "subtract", label: "减少" },
-                  ].map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setResultMaskMode(item.id as MaskMode)}
-                      className={`px-3 py-1.5 text-xs font-semibold transition ${
-                        resultMaskMode === item.id ? "bg-[#8f1d21] text-white" : "bg-white text-stone-600 hover:bg-stone-50"
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <p className="mt-1 text-sm text-stone-500">
-                {directGeneratedImage
-                  ? "请在下方创作结果中点击主体，或使用增加/减少画笔手动涂鸦指定主体区域。这里不会自动识别，生成拼豆图纸时会按你指定的绿色蒙版进行拼豆化。"
-                  : "AI 再创作只会在点击按钮后执行。再创作完成后，请在下方创作结果中点击主体或涂鸦绿色蒙版，系统会按该主体范围生成拼豆图纸。"}
-              </p>
+              <h2 className="text-xl font-semibold">创作结果</h2>
               <div className="mt-4">
                 <SubjectMaskEditor
                   imageUrl={extractedImageUrl}
                   loading={loading}
                   autoDetect={false}
+                  showHeader={false}
                   mode={resultMaskMode}
                   savedMask={resultMaskSnapshot}
                   onModeChange={setResultMaskMode}
