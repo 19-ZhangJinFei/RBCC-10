@@ -229,7 +229,7 @@ const helpData: HelpSection[] = [
       },
       {
         title: "上传自己的图片",
-        content: "支持上传 JPG/PNG 格式图片。上传后会先在原图上自动生成绿色主体蒙版，并基于蒙版计算主体颜色占比；用户可以继续用「鼠标」点选同色连通区域，或用「增加 / 减少」画笔精修主体范围。确认后的主体图和颜色比例会作为输入，再结合当前主题进行传统文化艺术再创作。传统纹样、书法字形、器物纹饰和简洁插画效果最佳。",
+        content: "支持上传 JPG/PNG 格式图片。上传后会先在原图上自动生成绿色主体蒙版，并基于蒙版计算主体颜色占比；用户可以继续用「鼠标」点选同色连通区域，或用「增加 / 减少」画笔精修主体范围。系统不会自动触发再创作，确认主体区域后需要点击右侧「AI 再创作」，主体图和颜色比例才会作为输入生成传统文化艺术图像。传统纹样、书法字形、器物纹饰和简洁插画效果最佳。",
       },
       {
         title: "使用内置样例",
@@ -388,9 +388,9 @@ const helpData: HelpSection[] = [
       {
         title: "六、交互式主体识别与颜色占比",
         content: [
-          "上传图片时，系统会先基于边界背景色建立背景模型，并用洪水填充找出与边界连通的背景区域，再取最大的前景连通块作为初始绿色主体蒙版。",
+          "上传图片时，系统会先基于边界背景色建立背景模型，并用洪水填充找出与边界连通的背景区域，再取最大的前景连通块作为初始绿色主体蒙版。该步骤只在浏览器本地更新蒙版、裁切主体和计算颜色占比，不会自动调用 AI。",
           "AI 生成图像和内置样例不会执行自动主体识别，初始蒙版为空。用户需要用「增加」画笔或「鼠标」同色连通选择手动添加主体区域；「减少」画笔用于从蒙版中擦除误选区域。",
-          "颜色占比完全由浏览器端代码计算，不交给 AI。算法只统计当前蒙版内的像素，使用 RGB 聚类得到主要颜色，并按像素数量计算百分比。上传图会把主体裁切图、颜色列表和占比发送给再创作接口；AI 生成图直接复制到输出端，手动蒙版仅用于颜色占比展示。",
+          "颜色占比完全由浏览器端代码计算，不交给 AI。算法只统计当前蒙版内的像素，使用 RGB 聚类得到主要颜色，并按像素数量计算百分比。上传图只有在用户点击右侧「AI 再创作」后，才会把主体裁切图、颜色列表和占比发送给再创作接口；AI 生成图直接复制到输出端，手动蒙版仅用于颜色占比展示。",
         ],
       },
       {
@@ -647,6 +647,8 @@ export default function CreativeBeadStudio() {
   const [aiChatResetToken, setAiChatResetToken] = useState(0);
   const [extractPrompt, setExtractPrompt] = useState<string | null>(null);
   const [scenePrompt, setScenePrompt] = useState<string | null>(null);
+  const [subjectAnalysis, setSubjectAnalysis] = useState<SubjectAnalysis | null>(null);
+  const [subjectDirty, setSubjectDirty] = useState(false);
 
   // 首页打字机动画状态
   const homeTypingLine1 = "方寸之间，粒粒皆可触摸的东方诗篇";
@@ -723,6 +725,8 @@ export default function CreativeBeadStudio() {
     clearPatternArtifacts();
     const original = renderSampleDesignOriginal(options);
     directOutputRef.current = true;
+    setSubjectAnalysis(null);
+    setSubjectDirty(false);
     setSourceImageUrl(original);
     setExtractedImageUrl(original);
     setExtractPrompt(null);
@@ -743,6 +747,8 @@ export default function CreativeBeadStudio() {
         reader.readAsDataURL(file);
       });
       directOutputRef.current = false;
+      setSubjectAnalysis(null);
+      setSubjectDirty(false);
       setSourceImageUrl(imageUrl);
       setExtractedImageUrl(null);
       setExtractPrompt(null);
@@ -784,6 +790,13 @@ export default function CreativeBeadStudio() {
     setToastType("warning");
     setToastMsg("请先完成主题提取，再生成拼豆图纸。");
     setStep("extract");
+      return;
+    }
+    if (!directOutputRef.current && subjectDirty) {
+      setError(null);
+      setToastType("warning");
+      setToastMsg("主体区域已变化，请先点击 AI 再创作生成新的输出图像。");
+      setStep("extract");
       return;
     }
 
@@ -845,6 +858,8 @@ export default function CreativeBeadStudio() {
       const result = await response.json();
       if (!response.ok) throw new Error(result?.error ?? "AI 图案生成失败");
       directOutputRef.current = true;
+      setSubjectAnalysis(null);
+      setSubjectDirty(false);
       setSourceImageUrl(result.imageUrl);
       setExtractedImageUrl(result.imageUrl);
       setExtractPrompt(result.prompt);
@@ -857,8 +872,20 @@ export default function CreativeBeadStudio() {
     }
   };
 
-  const handleSubjectAnalysis = useCallback(async (analysis: SubjectAnalysis) => {
+  const handleSubjectAnalysis = useCallback((analysis: SubjectAnalysis) => {
     if (directOutputRef.current) {
+      return;
+    }
+    setSubjectAnalysis(analysis);
+    setSubjectDirty(true);
+  }, []);
+
+  const generateSubjectRecreation = useCallback(async () => {
+    if (directOutputRef.current) return;
+    if (!subjectAnalysis) {
+      setError(null);
+      setToastType("warning");
+      setToastMsg("请先在左侧完成主体区域选择。");
       return;
     }
     setLoading(true);
@@ -868,10 +895,10 @@ export default function CreativeBeadStudio() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          imageUrl: analysis.subjectImageUrl,
+          imageUrl: subjectAnalysis.subjectImageUrl,
           isUpload: true,
-          colorSummary: analysis.colorSummary,
-          colors: analysis.colors,
+          colorSummary: subjectAnalysis.colorSummary,
+          colors: subjectAnalysis.colors,
           ...options,
         }),
       });
@@ -880,12 +907,13 @@ export default function CreativeBeadStudio() {
       setExtractedImageUrl(result.imageUrl);
       setExtractPrompt(result.prompt);
       clearPatternArtifacts();
+      setSubjectDirty(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "抠图结果转传统文创图案失败");
     } finally {
       setLoading(false);
     }
-  }, [clearPatternArtifacts, options]);
+  }, [clearPatternArtifacts, options, subjectAnalysis]);
 
   const generateScene = async () => {
     const scenePatternUrl = cleanPatternUrl ?? patternUrl;
@@ -1174,6 +1202,27 @@ export default function CreativeBeadStudio() {
             </div>
           </section>
           <div className="space-y-5">
+            {!directGeneratedImage && (
+              <section className="rounded-lg border border-stone-200 bg-white p-5">
+                <h2 className="text-xl font-semibold">AI 再创作</h2>
+                <p className="mt-1 text-sm leading-6 text-stone-500">
+                  左侧主体识别只在本地计算蒙版和颜色占比。点击此按钮后，才会把主体裁切图与颜色占比发送给 AI 生成传统文化风格输出图像。
+                </p>
+                {subjectDirty && extractedImageUrl && (
+                  <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    主体区域已变化，需要重新 AI 再创作后再生成拼豆图纸。
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={generateSubjectRecreation}
+                  disabled={loading || !subjectAnalysis}
+                  className="mt-4 rounded-md bg-[#8f1d21] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  {loading ? "生成中..." : extractedImageUrl ? "重新 AI 再创作" : "AI 再创作"}
+                </button>
+              </section>
+            )}
             {extractedImageUrl && (
               <section className="rounded-lg border border-stone-200 bg-white p-5">
                 <div className="flex items-center justify-between">
@@ -1193,7 +1242,7 @@ export default function CreativeBeadStudio() {
               </p>
               <div className="mt-4">{renderImageBox(extractedImageUrl, directGeneratedImage ? "AI 生成输出图像" : "AI 再创作图像")}</div>
               <div className="mt-4 flex flex-wrap gap-3">
-                <button type="button" onClick={buildPatternFromExtracted} disabled={loading || !extractedImageUrl} className="rounded-md bg-stone-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
+                <button type="button" onClick={buildPatternFromExtracted} disabled={loading || !extractedImageUrl || (!directGeneratedImage && subjectDirty)} className="rounded-md bg-stone-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
                   {loading ? "生成中..." : "生成拼豆图纸"}
                 </button>
               </div>
