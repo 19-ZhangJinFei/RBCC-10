@@ -111,7 +111,7 @@ const craftSteps = [
   {
     anchor: "guide-upload",
     title: "素材与提取",
-    text: "AI 生成或上传本地图片素材，提取核心主体意象进行艺术再创作，支持交互式抠图精细调整边界区域。",
+    text: "AI 生成图像直接进入输出端；上传本地图片时先提取核心主体意象，再进行艺术再创作。两种来源都支持交互式画笔标记主体区域并查看颜色占比。",
   },
   {
     anchor: "guide-mapping",
@@ -225,11 +225,11 @@ const helpData: HelpSection[] = [
     subs: [
       {
         title: "使用 AI 生成图案",
-        content: "点击「AI 生成图案」按钮，系统会根据你选择的主题、核心元素、作品形式等参数，调用AI生成一幅传统文化风格的图案。生成后会自动进入「主体提取」步骤。",
+        content: "点击「AI 生成图案」按钮，系统会根据你选择的主题、核心元素、作品形式等参数，调用 AI 生成一幅传统文化风格的图案。生成后会自动进入「主体提取与再创作」步骤，但不会再对 AI 图像执行自动主体识别或二次再创作，右侧输出端直接使用这张 AI 生成图像。左侧交互式主体识别默认没有绿色蒙版，用户可用「鼠标 / 增加 / 减少」和画笔大小手动标记主体区域，颜色占比会按手动蒙版实时计算。",
       },
       {
         title: "上传自己的图片",
-        content: "支持上传JPG/PNG格式图片。上传后会先进行主体提取（自动识别和分离主要主题意象），再结合当前主题进行传统文化艺术再创作。传统纹样、书法字形、器物纹饰和简洁插画效果最佳。复杂照片或多人物场景可能提取效果不理想。",
+        content: "支持上传 JPG/PNG 格式图片。上传后会先在原图上自动生成绿色主体蒙版，并基于蒙版计算主体颜色占比；用户可以继续用「鼠标」点选同色连通区域，或用「增加 / 减少」画笔精修主体范围。确认后的主体图和颜色比例会作为输入，再结合当前主题进行传统文化艺术再创作。传统纹样、书法字形、器物纹饰和简洁插画效果最佳。",
       },
       {
         title: "使用内置样例",
@@ -237,7 +237,7 @@ const helpData: HelpSection[] = [
       },
       {
         title: "使用交互式抠图",
-        content: "在「主体提取」步骤中，点击「打开交互式抠图」可手动调整抠图区域。通过调整前景/背景笔刷和阈值，精细控制提取结果，适合对AI自动提取不满意的场景。",
+        content: "在「主体提取与再创作」步骤中，主体识别直接显示在原图画布上，不再打开独立弹窗。顶部提供「鼠标 / 增加 / 减少」三种模式、画笔大小滑块和「重置识别」。上传图的重置会恢复自动主体蒙版；AI 生成图的重置会清空手动蒙版，由用户重新添加区域。",
       },
     ],
   },
@@ -298,7 +298,7 @@ const helpData: HelpSection[] = [
       },
       {
         title: "上传的图片提取效果不理想",
-        content: "主体提取算法基于图像分割技术，对轮廓清晰、背景简洁、主体突出的图片识别效果最好。以下是一些建议可以显著改善提取效果：1）如果你对自动提取结果不满意，可以在「主体提取」步骤中点击「打开交互式抠图」，通过手动标记前景和背景区域来精细调整抠图边界；2）选择主体与背景对比度更高的图片重新上传，纯色或渐变简单的背景更有利于算法识别；3）在「配置」步骤中调整主题和文化叙述的描述，这会影响 AI 对图片风格的理解，从而生成更符合预期的传统纹样风格图案。如果图片本身分辨率过低或主体过小，也可能导致提取效果不佳，建议使用清晰的大图。",
+        content: "上传图的主体提取算法基于边界背景建模、连通区域分析和本地颜色统计，对轮廓清晰、背景简洁、主体突出的图片识别效果最好。若自动蒙版不理想，可在「主体提取与再创作」步骤直接使用画笔精修：用「增加」补齐缺失主体，用「减少」擦除误选背景，用「鼠标」点选同色连通区域快速扩展边缘。AI 生成图不会自动生成蒙版，需要用户手动添加主体区域；该蒙版只用于颜色占比分析，不会触发二次 AI 再创作。",
       },
       {
         title: "拼豆图纸颜色太多或太少怎么办？",
@@ -386,7 +386,15 @@ const helpData: HelpSection[] = [
         ],
       },
       {
-        title: "六、开源技术栈",
+        title: "六、交互式主体识别与颜色占比",
+        content: [
+          "上传图片时，系统会先基于边界背景色建立背景模型，并用洪水填充找出与边界连通的背景区域，再取最大的前景连通块作为初始绿色主体蒙版。",
+          "AI 生成图像和内置样例不会执行自动主体识别，初始蒙版为空。用户需要用「增加」画笔或「鼠标」同色连通选择手动添加主体区域；「减少」画笔用于从蒙版中擦除误选区域。",
+          "颜色占比完全由浏览器端代码计算，不交给 AI。算法只统计当前蒙版内的像素，使用 RGB 聚类得到主要颜色，并按像素数量计算百分比。上传图会把主体裁切图、颜色列表和占比发送给再创作接口；AI 生成图直接复制到输出端，手动蒙版仅用于颜色占比展示。",
+        ],
+      },
+      {
+        title: "七、开源技术栈",
         content: [
           "前端框架：Next.js (React) + TypeScript",
           "样式方案：Tailwind CSS",
@@ -578,6 +586,7 @@ export default function CreativeBeadStudio() {
   const [paintColor, setPaintColor] = useState<string>('#000000');
   const [paintColorKey, setPaintColorKey] = useState<string>('');
   const sceneAbortRef = useRef<AbortController | null>(null);
+  const directOutputRef = useRef(false);
 
   const product = getProductTemplate(productId);
   const formLabel = formLabels.find((item) => item.id === productId)?.label ?? "拼豆底稿";
@@ -713,8 +722,10 @@ export default function CreativeBeadStudio() {
     abortScene();
     clearPatternArtifacts();
     const original = renderSampleDesignOriginal(options);
+    directOutputRef.current = true;
     setSourceImageUrl(original);
     setExtractedImageUrl(original);
+    setExtractPrompt(null);
     setError(null);
     setConfirmNew(null);
     setStep("extract");
@@ -731,6 +742,7 @@ export default function CreativeBeadStudio() {
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
+      directOutputRef.current = false;
       setSourceImageUrl(imageUrl);
       setExtractedImageUrl(null);
       setExtractPrompt(null);
@@ -832,8 +844,9 @@ export default function CreativeBeadStudio() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result?.error ?? "AI 图案生成失败");
+      directOutputRef.current = true;
       setSourceImageUrl(result.imageUrl);
-      setExtractedImageUrl(null);
+      setExtractedImageUrl(result.imageUrl);
       setExtractPrompt(result.prompt);
       clearPatternArtifacts();
       setStep("extract");
@@ -844,29 +857,10 @@ export default function CreativeBeadStudio() {
     }
   };
 
-  const handleUpload = (file: File) => {
-    abortScene();
-    const reader = new FileReader();
-    reader.onload = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const imageUrl = String(reader.result);
-        setSourceImageUrl(imageUrl);
-        setExtractedImageUrl(null);
-        setExtractPrompt(null);
-        clearPatternArtifacts();
-        setStep("extract");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "图片处理失败");
-    } finally {
-      setLoading(false);
-    }
-  };
-    reader.readAsDataURL(file);
-  };
-
   const handleSubjectAnalysis = useCallback(async (analysis: SubjectAnalysis) => {
+    if (directOutputRef.current) {
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -1160,10 +1154,11 @@ export default function CreativeBeadStudio() {
     }
 
     if (step === "extract") {
+      const directGeneratedImage = !!sourceImageUrl && extractedImageUrl === sourceImageUrl;
       return (
         <div className="grid gap-6 lg:grid-cols-2">
           <section className="rounded-lg border border-stone-200 bg-white p-5">
-            <SubjectMaskEditor imageUrl={sourceImageUrl} loading={loading} onSubjectChange={handleSubjectAnalysis} />
+            <SubjectMaskEditor imageUrl={sourceImageUrl} loading={loading} autoDetect={!directGeneratedImage} onSubjectChange={handleSubjectAnalysis} />
             <div className="mt-4 flex flex-wrap gap-3">
               <button type="button" onClick={handleGenerateAI} disabled={loading} className="rounded-md bg-[#8f1d21] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
                 {loading ? "生成中..." : "重新 AI 生成"}
@@ -1172,7 +1167,7 @@ export default function CreativeBeadStudio() {
                 重新上传
                 <input type="file" accept="image/*" className="hidden" onChange={(event) => {
                   const file = event.target.files?.[0];
-                  if (file) handleUpload(file);
+                  if (file) void doUpload(file);
                   event.currentTarget.value = "";
                 }} />
               </label>
@@ -1191,8 +1186,12 @@ export default function CreativeBeadStudio() {
             )}
             <section className="rounded-lg border border-stone-200 bg-white p-5">
               <h2 className="text-xl font-semibold">主体提取与再创作</h2>
-              <p className="mt-1 text-sm text-stone-500">由本地算法提取图片核心主体并计算主体颜色组成，AI 只根据计算结果进行传统文化风格再创作；接下来在第三阶段（拼豆图纸）进行像素化处理。</p>
-              <div className="mt-4">{renderImageBox(extractedImageUrl, "AI 再创作图像")}</div>
+              <p className="mt-1 text-sm text-stone-500">
+                {directGeneratedImage
+                  ? "AI 生成图像直接作为输出图像进入拼豆图纸阶段；左侧可手动画出主体区域用于查看颜色占比。"
+                  : "上传图由本地蒙版提取主体并计算主体颜色组成，AI 只根据计算结果进行传统文化风格再创作；接下来在第三阶段进行像素化处理。"}
+              </p>
+              <div className="mt-4">{renderImageBox(extractedImageUrl, directGeneratedImage ? "AI 生成输出图像" : "AI 再创作图像")}</div>
               <div className="mt-4 flex flex-wrap gap-3">
                 <button type="button" onClick={buildPatternFromExtracted} disabled={loading || !extractedImageUrl} className="rounded-md bg-stone-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
                   {loading ? "生成中..." : "生成拼豆图纸"}
@@ -1515,6 +1514,7 @@ export default function CreativeBeadStudio() {
     setAspectRatio(record.aspectRatio as AspectRatioId);
     setShowGrid(record.showGrid);
     setAntiAlias(record.antiAlias);
+    directOutputRef.current = !!record.sourceImageUrl && record.extractedImageUrl === record.sourceImageUrl;
     setSourceImageUrl(record.sourceImageUrl);
     setExtractedImageUrl(record.extractedImageUrl);
     setPatternUrl(record.patternUrl);

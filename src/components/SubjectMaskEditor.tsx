@@ -13,6 +13,7 @@ type MaskMode = "select" | "add" | "subtract";
 type Props = {
   imageUrl: string | null;
   loading?: boolean;
+  autoDetect?: boolean;
   onSubjectChange: (analysis: SubjectAnalysis) => void;
 };
 
@@ -37,7 +38,7 @@ function cloneSubjectMask(mask: SubjectMask): SubjectMask {
   };
 }
 
-export default function SubjectMaskEditor({ imageUrl, loading, onSubjectChange }: Props) {
+export default function SubjectMaskEditor({ imageUrl, loading, autoDetect = true, onSubjectChange }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const maskRef = useRef<SubjectMask | null>(null);
   const isDrawingRef = useRef(false);
@@ -92,15 +93,17 @@ export default function SubjectMaskEditor({ imageUrl, loading, onSubjectChange }
     maskRef.current = null;
     if (!imageUrl) return;
 
-    createSubjectMask(imageUrl)
+    createSubjectMask(imageUrl, { autoDetect })
       .then((subject) => {
         if (cancelled) return;
         maskRef.current = subject;
         setReady(true);
         draw();
-        const next = analyzeSubjectMask(subject);
-        setAnalysis(next);
-        onSubjectChange(next);
+        if (autoDetect) {
+          const next = analyzeSubjectMask(subject);
+          setAnalysis(next);
+          onSubjectChange(next);
+        }
       })
       .catch(() => {
         if (!cancelled) setReady(false);
@@ -109,7 +112,7 @@ export default function SubjectMaskEditor({ imageUrl, loading, onSubjectChange }
     return () => {
       cancelled = true;
     };
-  }, [draw, imageUrl, onSubjectChange]);
+  }, [autoDetect, draw, imageUrl, onSubjectChange]);
 
   const getCanvasPoint = useCallback((clientX: number, clientY: number) => {
     const canvas = canvasRef.current;
@@ -205,21 +208,29 @@ export default function SubjectMaskEditor({ imageUrl, loading, onSubjectChange }
     publish();
   }, [publish]);
 
-  const resetAutoMask = useCallback(() => {
+  const resetMask = useCallback(() => {
     if (!imageUrl) return;
-    createSubjectMask(imageUrl).then((subject) => {
+    createSubjectMask(imageUrl, { autoDetect }).then((subject) => {
       maskRef.current = cloneSubjectMask(subject);
       draw();
-      publish();
+      if (autoDetect) {
+        publish();
+      } else {
+        setAnalysis(null);
+      }
     });
-  }, [draw, imageUrl, publish]);
+  }, [autoDetect, draw, imageUrl, publish]);
 
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold">交互式主体识别</h2>
-          <p className="mt-1 text-sm text-stone-500">绿色蒙版为当前识别主体。可点选主体自动扩展边缘，或用画笔增减主体区域。</p>
+          <p className="mt-1 text-sm text-stone-500">
+            {autoDetect
+              ? "绿色蒙版为当前识别主体。可点选主体自动扩展边缘，或用画笔增减主体区域。"
+              : "当前图像不自动生成主体蒙版。请用增加画笔添加主体区域，也可用鼠标点选扩展同色连通区域。"}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex overflow-hidden rounded-md border border-stone-300">
@@ -254,7 +265,7 @@ export default function SubjectMaskEditor({ imageUrl, loading, onSubjectChange }
             />
             <span className="w-9 tabular-nums">{brushSize}px</span>
           </label>
-          <button type="button" onClick={resetAutoMask} disabled={!imageUrl || loading} className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-xs font-semibold text-stone-600 disabled:opacity-50">
+          <button type="button" onClick={resetMask} disabled={!imageUrl || loading} className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-xs font-semibold text-stone-600 disabled:opacity-50">
             重置识别
           </button>
         </div>
@@ -302,7 +313,7 @@ export default function SubjectMaskEditor({ imageUrl, loading, onSubjectChange }
           <div className="grid min-h-[320px] place-items-center text-sm text-stone-400">暂无图片</div>
         )}
         {imageUrl && !ready && (
-          <div className="grid min-h-[120px] place-items-center text-sm text-stone-400">正在识别主体...</div>
+          <div className="grid min-h-[120px] place-items-center text-sm text-stone-400">{autoDetect ? "正在识别主体..." : "正在加载图像..."}</div>
         )}
       </div>
 

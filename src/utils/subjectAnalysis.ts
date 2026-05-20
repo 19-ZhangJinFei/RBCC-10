@@ -351,7 +351,7 @@ function summarizeColors(data: Uint8ClampedArray, mask: Uint8Array, width: numbe
     .sort((a, b) => b.count - a.count);
 }
 
-export async function createSubjectMask(imageUrl: string): Promise<SubjectMask> {
+export async function createSubjectMask(imageUrl: string, options: { autoDetect?: boolean } = {}): Promise<SubjectMask> {
   const image = new Image();
   image.crossOrigin = "anonymous";
   await new Promise<void>((resolve, reject) => {
@@ -374,7 +374,9 @@ export async function createSubjectMask(imageUrl: string): Promise<SubjectMask> 
   ctx.drawImage(image, 0, 0, width, height);
 
   const imageData = ctx.getImageData(0, 0, width, height);
-  const mask = largestComponent(buildForegroundMask(imageData.data, width, height), width, height);
+  const mask = options.autoDetect === false
+    ? new Uint8Array(width * height)
+    : largestComponent(buildForegroundMask(imageData.data, width, height), width, height);
   return { imageData, mask, width, height };
 }
 
@@ -417,6 +419,3 @@ export function analyzeSubjectMask(input: SubjectMask): SubjectAnalysis {
   };
 }
 
-export async function analyzeSubjectImage(imageUrl: string): Promise<SubjectAnalysis> {
-  return analyzeSubjectMask(await createSubjectMask(imageUrl));
-}
