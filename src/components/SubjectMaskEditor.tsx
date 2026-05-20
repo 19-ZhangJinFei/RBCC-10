@@ -46,6 +46,7 @@ export default function SubjectMaskEditor({ imageUrl, loading, autoDetect = true
   const [brushSize, setBrushSize] = useState(16);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
   const [ready, setReady] = useState(false);
+  const [analysis, setAnalysis] = useState<SubjectAnalysis | null>(null);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -81,12 +82,14 @@ export default function SubjectMaskEditor({ imageUrl, loading, autoDetect = true
     const subject = maskRef.current;
     if (!subject) return;
     const next = analyzeSubjectMask(subject);
+    setAnalysis(next);
     onSubjectChange(next);
   }, [onSubjectChange]);
 
   useEffect(() => {
     let cancelled = false;
     setReady(false);
+    setAnalysis(null);
     maskRef.current = null;
     if (!imageUrl) return;
 
@@ -98,6 +101,7 @@ export default function SubjectMaskEditor({ imageUrl, loading, autoDetect = true
         draw();
         if (autoDetect) {
           const next = analyzeSubjectMask(subject);
+          setAnalysis(next);
           onSubjectChange(next);
         }
       })
@@ -216,6 +220,8 @@ export default function SubjectMaskEditor({ imageUrl, loading, autoDetect = true
       draw();
       if (autoDetect) {
         publish();
+      } else {
+        setAnalysis(null);
       }
     });
   }, [autoDetect, draw, imageUrl, publish]);
@@ -315,6 +321,29 @@ export default function SubjectMaskEditor({ imageUrl, loading, autoDetect = true
           <div className="grid min-h-[120px] place-items-center text-sm text-stone-400">{autoDetect ? "正在识别主体..." : "正在加载图像..."}</div>
         )}
       </div>
+
+      {analysis && analysis.colors.length > 0 && (
+        <div className="mt-4 rounded-md border border-stone-200 bg-stone-50 p-3">
+          <p className="text-xs font-semibold text-stone-600">主体颜色占比</p>
+          <div className="mt-3 space-y-2">
+            {analysis.colors.map((color) => {
+              const percent = color.ratio * 100;
+              return (
+                <div key={color.hex} className="grid grid-cols-[5.5rem_1fr_3.5rem] items-center gap-2 text-xs">
+                  <span className="font-mono font-semibold text-stone-700">{color.hex}:</span>
+                  <div className="h-4 overflow-hidden rounded-full bg-white ring-1 ring-stone-200">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${Math.max(2, percent)}%`, backgroundColor: color.hex }}
+                    />
+                  </div>
+                  <span className="text-right font-mono text-stone-600">{percent.toFixed(1)}%</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

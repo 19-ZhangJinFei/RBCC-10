@@ -2,9 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CultureExplanation from "@/components/CultureExplanation";
-import ExportPanel from "@/components/ExportPanel";
 import FilterDropdown from "@/components/FilterDropdown";
-import ProductMockup from "@/components/ProductMockup";
 import ProfilePage from "@/components/ProfilePage";
 import SubjectMaskEditor from "@/components/SubjectMaskEditor";
 import LoginModal from "@/components/LoginModal";
@@ -53,9 +51,9 @@ type ProductConfigDefault = {
 
 const studioSteps: { id: StudioStep; label: string; desc: string }[] = [
   { id: "config", label: "配置", desc: "选择传统主题、作品形式、网格尺寸、颜色数量和可用色" },
-  { id: "extract", label: "主体提取与再创作", desc: "提取图片核心主体意象，分析颜色组成后按原配色进行文化风格再创作（支持重新提取）" },
+  { id: "extract", label: "主体提取与再创作", desc: "提取图片核心主体意象，展示颜色占比，并基于主体图进行文化风格再创作" },
   { id: "pattern", label: "拼豆图纸", desc: "像素化处理、自动移除轮廓外浅色杂块以节省拼豆用量、生成带色号网格并统计用量" },
-  { id: "preview", label: "场景预览", desc: "基于拼豆图纸生成真实拼豆成品场景预览、查看文化说明并导出完整制作资料" },
+  { id: "preview", label: "制作方案", desc: "根据拼豆图纸生成材料、工具、拼豆、熨烫步骤和导出资料" },
 ];
 
 const formLabels = [
@@ -138,8 +136,8 @@ const craftSteps = [
   },
   {
     anchor: "guide-export",
-    title: "导出与预览",
-    text: "导出带色号图纸、预览图、文化说明和用量统计 CSV，用于个人创作、课堂活动、社群分享或开源二次开发。",
+    title: "制作与导出",
+    text: "生成材料、工具、拼豆、熨烫步骤和成本时间估算，并导出图纸、材料清单和制作方案。",
   },
 ];
 
@@ -165,7 +163,7 @@ const helpSidebarNav = [
       { label: "主题选择", anchor: "guide-theme" },
       { label: "素材与提取", anchor: "guide-upload" },
       { label: "配色与调色板", anchor: "guide-mapping" },
-      { label: "导出与预览", anchor: "guide-export" },
+      { label: "制作与导出", anchor: "guide-export" },
     ],
   },
   {
@@ -204,7 +202,7 @@ const helpData: HelpSection[] = [
           "✅ 背景自动移除：自动识别外部背景，统计和导出时忽略",
           "✅ 交互式调色板：按色系筛选、强制指定/排除颜色，精准控制最终色表",
           "✅ 开源色号体系：使用开源中性色号标注，不绑定任何商家",
-          "✅ 一站式导出：图纸（带色号）+ 统计CSV + 文化说明 + 场景预览",
+          "✅ 一站式导出：图纸（带色号）+ 统计CSV + 文化说明 + 制作方案",
         ],
       },
     ],
@@ -284,7 +282,7 @@ const helpData: HelpSection[] = [
   },
   {
     id: "guide-export",
-    title: "导出与预览",
+    title: "制作与导出",
     icon: "📤",
     subs: [
       {
@@ -296,12 +294,12 @@ const helpData: HelpSection[] = [
         content: "点击「下载用量 CSV」可导出颜色用量统计表，包含色号、RGB值、数量、比例和用途。CSV文件可以用Excel或WPS打开，方便采购和整理材料。",
       },
       {
-        title: "生成场景预览",
-        content: "在「场景预览」步骤，点击「生成场景图」可查看拼豆图纸在选定作品形式上的效果预览。场景图由AI根据图纸和作品形式自动生成，帮助想象成品效果。",
+        title: "查看制作方案",
+        content: "在「制作方案」步骤，系统会根据当前图纸统计拼豆总数、颜色数、预估成本和预估用时，并给出材料选择、工具选择、拼豆顺序和熨烫注意事项。",
       },
       {
         title: "导出完整作品资料",
-        content: "在「场景预览」步骤右侧的「导出作品资料」面板中，你可以一键导出包含文化说明、场景图、拼豆图纸和用量统计的完整作品档案。",
+        content: "在「制作方案」步骤右侧可以查看图纸并导出带色号图纸、无标注图纸、材料清单 CSV 和制作方案文本。",
       },
     ],
   },
@@ -449,6 +447,34 @@ function downloadBeadCsv(items: BeadCount[], filename: string): void {
   downloadUrl(URL.createObjectURL(blob), filename);
 }
 
+function downloadTextFile(content: string, filename: string): void {
+  const blob = new Blob([`\uFEFF${content}`], { type: "text/plain;charset=utf-8" });
+  downloadUrl(URL.createObjectURL(blob), filename);
+}
+
+function estimateBeadingMinutes(totalBeads: number, colorKinds: number): number {
+  if (totalBeads <= 0) return 0;
+  return Math.max(20, Math.round(totalBeads * 0.22 + colorKinds * 4));
+}
+
+function formatDuration(minutes: number): string {
+  if (minutes <= 0) return "-";
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours === 0) return `${mins} 分钟`;
+  if (mins === 0) return `${hours} 小时`;
+  return `${hours} 小时 ${mins} 分钟`;
+}
+
+function estimateMaterialCost(totalBeads: number, colorKinds: number): { min: number; max: number } {
+  if (totalBeads <= 0) return { min: 0, max: 0 };
+  const beadPacks = Math.max(colorKinds, Math.ceil((totalBeads * 1.15) / 1000));
+  return {
+    min: beadPacks * 3 + 8,
+    max: beadPacks * 7 + 20,
+  };
+}
+
 function PatternMiniature({ colors }: { colors: string[] }) {
   const cells = Array.from({ length: 64 }, (_, index) => {
     const x = index % 8;
@@ -593,9 +619,6 @@ export default function CreativeBeadStudio() {
   const [pattern, setPattern] = useState<BeadPattern | null>(null);
   const [patternUrl, setPatternUrl] = useState<string | null>(null);
   const [cleanPatternUrl, setCleanPatternUrl] = useState<string | null>(null);
-  const [mockupUrl, setMockupUrl] = useState<string | null>(null);
-  const [productSceneUrl, setProductSceneUrl] = useState<string | null>(null);
-  const [sceneLoading, setSceneLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -603,7 +626,6 @@ export default function CreativeBeadStudio() {
   const [isPainting, setIsPainting] = useState(false);
   const [paintColor, setPaintColor] = useState<string>('#000000');
   const [paintColorKey, setPaintColorKey] = useState<string>('');
-  const sceneAbortRef = useRef<AbortController | null>(null);
   const directOutputRef = useRef(false);
 
   const product = getProductTemplate(productId);
@@ -645,13 +667,6 @@ export default function CreativeBeadStudio() {
     return `已指定 ${forcedColors.length} 种颜色，超过当前 ${colorCount} 色上限。超出的 ${forcedColors.length - colorCount} 种颜色不会进入最终映射，请减少指定颜色或提高颜色上限。`;
   }, [colorCount, forcedColors.length]);
 
-  const abortScene = useCallback(() => {
-    sceneAbortRef.current?.abort();
-    sceneAbortRef.current = null;
-  }, []);
-
-  const prevStepRef = useRef<StudioStep>("config");
-  const sceneAutoTriggeredRef = useRef(false);
   const restoringRef = useRef(false);
 
   const [confirmNew, setConfirmNew] = useState<"ai" | "sample" | "upload" | null>(null);
@@ -664,7 +679,6 @@ export default function CreativeBeadStudio() {
   const [showAiChat, setShowAiChat] = useState(false);
   const [aiChatResetToken, setAiChatResetToken] = useState(0);
   const [extractPrompt, setExtractPrompt] = useState<string | null>(null);
-  const [scenePrompt, setScenePrompt] = useState<string | null>(null);
   const [subjectAnalysis, setSubjectAnalysis] = useState<SubjectAnalysis | null>(null);
   const [subjectDirty, setSubjectDirty] = useState(false);
 
@@ -734,12 +748,9 @@ export default function CreativeBeadStudio() {
     setPattern(null);
     setPatternUrl(null);
     setCleanPatternUrl(null);
-    setProductSceneUrl(null);
-    setMockupUrl(null);
   }, []);
 
   const doUseSample = useCallback(() => {
-    abortScene();
     clearPatternArtifacts();
     const original = renderSampleDesignOriginal(options);
     directOutputRef.current = true;
@@ -751,10 +762,9 @@ export default function CreativeBeadStudio() {
     setError(null);
     setConfirmNew(null);
     setStep("extract");
-  }, [abortScene, clearPatternArtifacts, options]);
+  }, [clearPatternArtifacts, options]);
 
   const doUpload = async (file: File) => {
-    abortScene();
     setLoading(true);
     setError(null);
     try {
@@ -836,8 +846,6 @@ export default function CreativeBeadStudio() {
         selectedFilter,
       );
       setPattern(next);
-      setProductSceneUrl(null);
-      setMockupUrl(null);
       setStep("pattern");
     } catch (err) {
       setError(err instanceof Error ? err.message : "拼豆图纸生成失败");
@@ -872,7 +880,6 @@ export default function CreativeBeadStudio() {
   }, [step, extractedImageUrl, options, antiAlias, connectIslands, forcedColors, selectedFilter]);
 
   const handleGenerateAI = async () => {
-    abortScene();
     setLoading(true);
     setError(null);
     try {
@@ -923,7 +930,9 @@ export default function CreativeBeadStudio() {
         body: JSON.stringify({
           imageUrl: subjectAnalysis.subjectImageUrl,
           isUpload: true,
-          ...options,
+          product: formLabel,
+          productPrompt: product.aiPrompt,
+          aspectRatio,
         }),
       });
       const result = await response.json();
@@ -937,61 +946,7 @@ export default function CreativeBeadStudio() {
     } finally {
       setLoading(false);
     }
-  }, [clearPatternArtifacts, options, subjectAnalysis]);
-
-  const generateScene = async () => {
-    const scenePatternUrl = cleanPatternUrl ?? patternUrl;
-    if (!scenePatternUrl) return;
-    abortScene();
-    const controller = new AbortController();
-    sceneAbortRef.current = controller;
-    setSceneLoading(true);
-    setError(null);
-    try {
-      const response = await fetch("/api/generate-product-scene", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ patternUrl: scenePatternUrl, productId, aspectRatio }),
-        signal: controller.signal,
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result?.error ?? "场景预览生成失败");
-      setProductSceneUrl(result.imageUrl);
-      setMockupUrl(result.imageUrl);
-      setScenePrompt(result.prompt);
-    } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") return;
-      setError(err instanceof Error ? err.message : "场景预览生成失败");
-    } finally {
-      setSceneLoading(false);
-    }
-  };
-
-  // 进入步骤四（场景预览）时，如果已有拼豆图纸但尚未生成场景图，自动触发生成
-  useEffect(() => {
-    const prev = prevStepRef.current;
-    prevStepRef.current = step;
-
-    // 只有从其他步骤进入 preview 时才自动触发
-    if (step === "preview" && prev !== "preview") {
-      const hasPattern = !!(cleanPatternUrl ?? patternUrl);
-      if (hasPattern && !productSceneUrl && !sceneLoading) {
-        sceneAutoTriggeredRef.current = true;
-        generateScene();
-      }
-    }
-  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // 当 patternUrl 或 cleanPatternUrl 变化时（图纸重新生成），如果当前在 preview 步骤且有图纸但无场景，自动重新生成场景
-  useEffect(() => {
-    if (step === "preview") {
-      const hasPattern = !!(cleanPatternUrl ?? patternUrl);
-      if (hasPattern && !productSceneUrl && !sceneLoading) {
-        generateScene();
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [patternUrl, cleanPatternUrl]);
+  }, [aspectRatio, clearPatternArtifacts, formLabel, product.aiPrompt, subjectAnalysis]);
 
   const renderImageBox = (url: string | null, alt: string) => (
     <div className="aspect-square overflow-hidden rounded-md border border-stone-200 bg-stone-50">
@@ -1282,6 +1237,7 @@ export default function CreativeBeadStudio() {
 
     if (step === "pattern") {
       const total = beadCounts.reduce((sum, item) => sum + item.count, 0);
+      const beadingMinutes = estimateBeadingMinutes(total, beadCounts.length);
       
       // 处理画布点击：拼豆图纸上点击网格修改颜色
       const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1433,7 +1389,7 @@ export default function CreativeBeadStudio() {
           <div className="flex flex-col gap-6 overflow-y-auto">
           <section className="rounded-lg border border-stone-200 bg-white p-5">
             <h2 className="text-xl font-semibold">用量统计</h2>
-            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+            <div className="mt-3 grid grid-cols-2 gap-2 text-center md:grid-cols-4">
               <div className="rounded-md bg-stone-100 p-3">
                 <p className="text-xs text-stone-500">总颗数</p>
                 <p className="text-lg font-bold">{total}</p>
@@ -1445,6 +1401,10 @@ export default function CreativeBeadStudio() {
               <div className="rounded-md bg-stone-100 p-3">
                 <p className="text-xs text-stone-500">网格</p>
                 <p className="text-lg font-bold">{pattern ? `${pattern.width}x${pattern.height}` : "-"}</p>
+              </div>
+              <div className="rounded-md bg-stone-100 p-3">
+                <p className="text-xs text-stone-500">预估用时</p>
+                <p className="text-lg font-bold">{formatDuration(beadingMinutes)}</p>
               </div>
             </div>
             <div className="mt-4 max-h-[480px] overflow-auto rounded-md border border-stone-200">
@@ -1459,7 +1419,16 @@ export default function CreativeBeadStudio() {
                 </thead>
                 <tbody>
                   {beadCounts.map((item) => (
-                    <tr key={item.rgb} className="border-t border-stone-200">
+                    <tr
+                      key={item.rgb}
+                      className="cursor-pointer border-t border-stone-200 hover:bg-stone-50"
+                      onClick={() => {
+                        setPaintColor(item.rgb);
+                        setPaintColorKey(item.brandCode);
+                        setIsPainting(true);
+                      }}
+                      title="点击选择该颜色作为编辑颜色"
+                    >
                       <td className="px-3 py-2">
                         <span className="mr-2 inline-block h-4 w-4 rounded-sm border border-stone-300 align-middle" style={{ backgroundColor: item.rgb }} />
                         {item.rgb}
@@ -1534,41 +1503,119 @@ export default function CreativeBeadStudio() {
       );
     }
 
+    const total = beadCounts.reduce((sum, item) => sum + item.count, 0);
+    const beadingMinutes = estimateBeadingMinutes(total, beadCounts.length);
+    const cost = estimateMaterialCost(total, beadCounts.length);
+    const planText = [
+      `${copy.title} 拼豆制作方案`,
+      "",
+      `作品形式：${formLabel}`,
+      `网格：${pattern ? `${pattern.width} x ${pattern.height}` : "-"}`,
+      `颜色数：${beadCounts.length}`,
+      `拼豆总数：${total}`,
+      `预估拼豆用时：${formatDuration(beadingMinutes)}`,
+      `预估材料成本：约 ${cost.min}-${cost.max} 元`,
+      "",
+      "材料选择：",
+      "1. 按材料清单准备对应色号拼豆，建议每种颜色比统计数量多准备 10%-15%。",
+      "2. 优先选择同一规格、同一品牌或尺寸一致的 5mm 拼豆，避免熨烫高度不一致。",
+      "3. 大面积底色可多准备一包，少量点缀色按最小包装购买即可。",
+      "",
+      "工具选择：",
+      "1. 透明方形模板板，尺寸需覆盖当前图纸网格。",
+      "2. 尖头镊子或取豆笔，用于定位小色块和边缘细节。",
+      "3. 熨斗、烘焙纸或专用熨烫纸、平整压板。",
+      "",
+      "拼豆步骤：",
+      "1. 从边缘轮廓或最大色块开始摆放，减少整体偏移。",
+      "2. 每完成一种颜色，对照图纸和用量统计检查遗漏。",
+      "3. 小面积颜色最后补齐，避免移动模板时松散。",
+      "",
+      "熨烫步骤与注意事项：",
+      "1. 覆盖熨烫纸后使用中低温，不要开蒸汽。",
+      "2. 以小圆周移动熨斗，先轻压 10-15 秒观察融合状态，再逐步补熨。",
+      "3. 豆孔略收缩且相邻豆粒连接即可停止，避免过熨导致图案变形。",
+      "4. 熨完后用平整重物压 2-3 分钟，冷却后再从模板上取下。",
+    ].join("\n");
+
     return (
       <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
-        <section className="rounded-lg border border-stone-200 bg-white p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-semibold">成品场景预览</h2>
-              <p className="mt-1 text-sm text-stone-500">查看拼豆图纸在 {formLabel} 上的效果，可生成更完整的场景图。</p>
+        <section className="space-y-5">
+          <div className="rounded-lg border border-stone-200 bg-white p-5">
+            <h2 className="text-xl font-semibold">制作方案</h2>
+            <p className="mt-1 text-sm leading-6 text-stone-500">根据当前图纸用量生成材料、工具、拼豆和熨烫流程。</p>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <div className="rounded-md bg-stone-100 p-3">
+                <p className="text-xs text-stone-500">预估成本</p>
+                <p className="text-lg font-bold">约 {cost.min}-{cost.max} 元</p>
+              </div>
+              <div className="rounded-md bg-stone-100 p-3">
+                <p className="text-xs text-stone-500">拼豆用时</p>
+                <p className="text-lg font-bold">{formatDuration(beadingMinutes)}</p>
+              </div>
+              <div className="rounded-md bg-stone-100 p-3">
+                <p className="text-xs text-stone-500">图纸规模</p>
+                <p className="text-lg font-bold">{pattern ? `${pattern.width}x${pattern.height}` : "-"}</p>
+              </div>
             </div>
-            <button type="button" onClick={generateScene} disabled={!patternUrl || sceneLoading} className="rounded-md bg-[#8f1d21] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
-              {sceneLoading ? "生成中..." : "生成场景图"}
-            </button>
           </div>
-          <div className="mt-5">
-            <ProductMockup
-              pattern={pattern}
-              product={product}
-              sceneUrl={productSceneUrl}
-              loading={sceneLoading}
-              onRendered={(url) => setMockupUrl(url)}
-            />
+
+          <div className="rounded-lg border border-stone-200 bg-white p-5">
+            <h3 className="text-lg font-semibold">材料选择</h3>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-stone-600">
+              <li>按用量统计准备对应色号拼豆，建议每种颜色多备 10%-15%，防止丢豆和色差补充。</li>
+              <li>优先使用同规格拼豆；同一作品不要混用高度差异明显的材料。</li>
+              <li>大色块颜色按整包准备，点缀色可按最小包装购买。</li>
+            </ul>
+          </div>
+
+          <div className="rounded-lg border border-stone-200 bg-white p-5">
+            <h3 className="text-lg font-semibold">工具选择</h3>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-stone-600">
+              <li>模板板：透明方形板更适合对照网格，尺寸需覆盖完整图纸。</li>
+              <li>定位工具：尖头镊子适合调整边缘和孤立小色块，取豆笔适合大面积铺色。</li>
+              <li>熨烫工具：熨斗、熨烫纸、平整压板；熨斗需关闭蒸汽。</li>
+            </ul>
+          </div>
+
+          <div className="rounded-lg border border-stone-200 bg-white p-5">
+            <h3 className="text-lg font-semibold">拼豆</h3>
+            <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-6 text-stone-600">
+              <li>先摆放外轮廓或最大色块，建立边界后再填内部细节。</li>
+              <li>按颜色逐项完成，每完成一种颜色就对照用量统计检查遗漏。</li>
+              <li>细小点缀色最后补齐，避免在大面积移动时被碰偏。</li>
+            </ol>
+          </div>
+
+          <div className="rounded-lg border border-stone-200 bg-white p-5">
+            <h3 className="text-lg font-semibold">熨烫</h3>
+            <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-6 text-stone-600">
+              <li>覆盖熨烫纸后使用中低温，先轻压并小范围圆周移动。</li>
+              <li>首次熨烫 10-15 秒后检查豆粒连接状态，再分段补熨。</li>
+              <li>豆孔略收缩且相邻豆粒已连接即可停止，避免过熨导致图案变形。</li>
+              <li>熨完用平整重物压 2-3 分钟，完全冷却后再脱板。</li>
+            </ol>
           </div>
         </section>
 
         <section className="space-y-5">
           <div className="rounded-lg border border-stone-200 bg-white p-5">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">当前 AI 提示词</h2>
-            </div>
-            <div className="mt-3 max-h-40 overflow-y-auto rounded-md bg-stone-50 p-3 text-xs leading-relaxed text-stone-600 font-mono whitespace-pre-wrap">
-              {scenePrompt || "无"}
-            </div>
+            <h2 className="mb-3 text-xl font-semibold">图纸预览</h2>
+            {patternUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={patternUrl} alt="拼豆图纸" className="max-h-[520px] w-full rounded-md border border-stone-200 object-contain" />
+            ) : (
+              <div className="grid min-h-64 place-items-center rounded-md bg-stone-50 text-sm text-stone-400">暂无图纸</div>
+            )}
           </div>
           <div className="rounded-lg border border-stone-200 bg-white p-5">
-            <h2 className="mb-3 text-xl font-semibold">导出作品资料</h2>
-            <ExportPanel title={copy.title} patternUrl={patternUrl} mockupUrl={mockupUrl} copy={copy} beadCounts={beadCounts} />
+            <h2 className="mb-3 text-xl font-semibold">方案导出</h2>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button type="button" disabled={!patternUrl} onClick={() => patternUrl && downloadUrl(patternUrl, `${copy.title}-拼豆图纸.png`)} className="rounded-md bg-stone-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">下载图纸 PNG</button>
+              <button type="button" disabled={!cleanPatternUrl} onClick={() => cleanPatternUrl && downloadUrl(cleanPatternUrl, `${copy.title}-无标注图纸.png`)} className="rounded-md bg-stone-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">下载无标注 PNG</button>
+              <button type="button" disabled={beadCounts.length === 0} onClick={() => downloadBeadCsv(beadCounts, `${copy.title}-材料清单.csv`)} className="rounded-md bg-stone-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">导出材料 CSV</button>
+              <button type="button" disabled={!pattern} onClick={() => downloadTextFile(planText, `${copy.title}-制作方案.txt`)} className="rounded-md bg-stone-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">导出制作方案</button>
+            </div>
           </div>
           <div className="rounded-lg border border-stone-200 bg-white p-5">
             <h2 className="mb-3 text-xl font-semibold">文化说明</h2>
@@ -1596,8 +1643,6 @@ export default function CreativeBeadStudio() {
     setExtractedImageUrl(record.extractedImageUrl);
     setPatternUrl(record.patternUrl);
     setCleanPatternUrl(record.cleanPatternUrl);
-    setMockupUrl(record.mockupUrl);
-    setProductSceneUrl(record.productSceneUrl);
 
     // 恢复 pattern 对象
     if (record.patternData) {
@@ -1628,7 +1673,7 @@ export default function CreativeBeadStudio() {
       title: `${theme} · ${element}`,
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      completed: step === "preview" && !!productSceneUrl,
+      completed: step === "preview" && !!pattern,
       theme,
       element,
       meaning,
@@ -1643,11 +1688,11 @@ export default function CreativeBeadStudio() {
       patternData: pattern ? JSON.stringify(pattern) : null,
       patternUrl,
       cleanPatternUrl,
-      mockupUrl,
-      productSceneUrl,
+      mockupUrl: null,
+      productSceneUrl: null,
     };
     saveProjectRecord(record);
-  }, [view, step, theme, element, meaning, productId, gridSize, colorCount, aspectRatio, showGrid, antiAlias, pattern, patternUrl, cleanPatternUrl, productSceneUrl, sourceImageUrl, extractedImageUrl, mockupUrl]);
+  }, [view, step, theme, element, meaning, productId, gridSize, colorCount, aspectRatio, showGrid, antiAlias, pattern, patternUrl, cleanPatternUrl, sourceImageUrl, extractedImageUrl]);
 
   // 帮助页面：当 details 离开视口时自动收起
   useEffect(() => {
@@ -1983,7 +2028,7 @@ export default function CreativeBeadStudio() {
                         setToastMsg("请先完成主体提取，再生成拼豆图纸。");
                       } else if (index === 3 && !pattern) {
                         setToastType("warning");
-                        setToastMsg("请先生成拼豆图纸，再进入场景预览。");
+                        setToastMsg("请先生成拼豆图纸，再进入制作方案。");
                       }
                       return;
                     }
@@ -2030,14 +2075,18 @@ export default function CreativeBeadStudio() {
                   <button
                     type="button"
                     onClick={() => {
+                      const action = confirmNew;
                       clearPatternArtifacts();
                       setSourceImageUrl(null);
                       setExtractedImageUrl(null);
-                      if (confirmNew === "ai") {
+                      setSubjectAnalysis(null);
+                      setSubjectDirty(false);
+                      setConfirmNew(null);
+                      if (action === "ai") {
                         handleGenerateAI();
-                      } else if (confirmNew === "sample") {
+                      } else if (action === "sample") {
                         doUseSample();
-                      } else if (confirmNew === "upload") {
+                      } else if (action === "upload") {
                         const file = pendingUploadRef.current;
                         pendingUploadRef.current = null;
                         if (file) void doUpload(file);
