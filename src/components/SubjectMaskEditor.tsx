@@ -153,6 +153,7 @@ export default function SubjectMaskEditor({ imageUrl, loading, autoDetect = true
     visited[seedIndex] = 1;
     let head = 0;
     const threshold = 44;
+    const removingMask = subject.mask[seedIndex] === 1;
 
     while (head < queue.length) {
       const current = queue[head++];
@@ -168,14 +169,18 @@ export default function SubjectMaskEditor({ imageUrl, loading, autoDetect = true
 
       for (const next of neighbors) {
         if (next < 0 || visited[next]) continue;
-        if (rgbDistance(subject.imageData.data, seedIndex, next) > threshold) continue;
+        if (removingMask) {
+          if (!subject.mask[next]) continue;
+        } else if (rgbDistance(subject.imageData.data, seedIndex, next) > threshold) {
+          continue;
+        }
         visited[next] = 1;
         queue.push(next);
       }
     }
 
     for (const index of selected) {
-      subject.mask[index] = 1;
+      subject.mask[index] = removingMask ? 0 : 1;
     }
     draw();
     publish();
