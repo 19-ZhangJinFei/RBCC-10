@@ -1,7 +1,7 @@
-# 任务进度
+# Task Progress
 
-- [x] 1. 拼豆图纸清晰度提升 - culturePattern.ts (canvas 640→2000, 字体优化)
-- [x] 2. 首页卡片齐平 + 两端对齐 - CreativeBeadStudio.tsx (flex h-full flex-col + text-justify)
-- [x] 3. 第二步文字缩短 + 标题统一 - CreativeBeadStudio.tsx
-- [x] 4. 增添图案寓意说明 - cultureTextGenerator.ts
-- [x] 5. 检查第3→4步图像传递 - 已验证 cleanPatternUrl 正确传入 API
+- [x] Analyze the publish flow code in both CreativeBeadStudio.tsx and ProfilePage.tsx
+- [x] Identify the root cause: ProfilePage uses separate `publishMessage` state rendered as green div, NOT the wine-red bouncing toast
+- [x] Fix ProfilePage.tsx `handlePublish` - add `publishMessageType` to distinguish success/error
+- [x] Fix ProfilePage.tsx render - change error display to wine-red bounce toast matching CreativeBeadStudio
+- [ ] Verify final review

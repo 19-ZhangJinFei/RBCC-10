@@ -44,6 +44,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout }: Prop
   const [batchMode, setBatchMode] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [publishMessage, setPublishMessage] = useState<string | null>(null);
+  const [publishMessageType, setPublishMessageType] = useState<"success" | "error">("success");
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -154,8 +155,10 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout }: Prop
         author: profile.nickname || "豆韵用户",
         avatar: profile.avatarUrl,
       });
+      setPublishMessageType("success");
       setPublishMessage("作品已发布到云端社区");
     } catch (err) {
+      setPublishMessageType("error");
       setPublishMessage(err instanceof Error ? err.message : "作品发布失败");
     }
   }, [profile.avatarUrl, profile.nickname]);
@@ -377,7 +380,9 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout }: Prop
             )}
           </div>
           {publishMessage && (
-            <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            <div className={`fixed left-1/2 top-20 z-[200] -translate-x-1/2 animate-bounce rounded-lg px-5 py-3 text-sm font-medium text-white shadow-lg ${
+              publishMessageType === "error" ? "bg-[#6b1a20]" : "bg-emerald-600"
+            }`}>
               {publishMessage}
             </div>
           )}
