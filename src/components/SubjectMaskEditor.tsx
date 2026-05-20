@@ -8,7 +8,8 @@ import {
   type SubjectMask,
 } from "@/utils/subjectAnalysis";
 
-export type MaskMode = "select" | "add" | "subtract";
+export type MaskMode = "select" | "add" | "subtract" | "lasso";
+type MaskPoint = { x: number; y: number };
 
 type Props = {
   imageUrl: string | null;
@@ -23,6 +24,7 @@ type Props = {
 };
 
 const BRUSH_SIZES = [8, 16, 24, 36, 48];
+const LASSO_MIN_POINTS = 8;
 
 function rgbDistance(data: Uint8ClampedArray, a: number, b: number): number {
   const ai = a * 4;
@@ -43,6 +45,110 @@ function cloneSubjectMask(mask: SubjectMask): SubjectMask {
   };
 }
 
+function isPointInsidePolygon(x: number, y: number, polygon: MaskPoint[]): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const pi = polygon[i];
+    const pj = polygon[j];
+    const intersects = (pi.y > y) !== (pj.y > y)
+      && x < ((pj.x - pi.x) * (y - pi.y)) / (pj.y - pi.y) + pi.x;
+    if (intersects) inside = !inside;
+  }
+  return inside;
+}
+
+function otsu(values: number[]): number {
+  if (values.length === 0) return 0;
+  let min = Infinity;
+  let max = -Infinity;
+  for (const value of values) {
+    min = Math.min(min, value);
+    max = Math.max(max, value);
+  }
+  if (min === max) return min;
+  const bins = 128;
+  const histogram = Array.from({ length: bins }, () => 0);
+  for (const value of values) {
+    const index = Math.max(0, Math.min(bins - 1, Math.floor(((value - min) / (max - min)) * (bins - 1))));
+    histogram[index] += 1;
+  }
+  const total = values.length;
+  let sum = 0;
+  for (let i = 0; i < bins; i++) sum += i * histogram[i];
+  let backgroundWeight = 0;
+  let backgroundSum = 0;
+  let bestVariance = -1;
+  let bestIndex = 0;
+  for (let i = 0; i < bins; i++) {
+    backgroundWeight += histogram[i];
+    if (backgroundWeight === 0) continue;
+    const foregroundWeight = total - backgroundWeight;
+    if (foregroundWeight === 0) break;
+    backgroundSum += i * histogram[i];
+    const backgroundMean = backgroundSum / backgroundWeight;
+    const foregroundMean = (sum - backgroundSum) / foregroundWeight;
+    const variance = backgroundWeight * foregroundWeight * (backgroundMean - foregroundMean) ** 2;
+    if (variance > bestVariance) {
+      bestVariance = variance;
+      bestIndex = i;
+    }
+  }
+  return min + ((bestIndex + 0.5) / bins) * (max - min);
+}
+
+function buildPaletteFromIndices(data: Uint8ClampedArray, indices: number[], targetCount: number): number[] {
+  if (indices.length === 0) return [];
+  const stride = Math.max(1, Math.floor(indices.length / 512));
+  const samples: number[] = [];
+  for (let i = 0; i < indices.length; i += stride) samples.push(indices[i]);
+  const centers = [samples[0]];
+  while (centers.length < Math.min(targetCount, samples.length)) {
+    let farthest = samples[0];
+    let farthestDistance = -1;
+    for (const sample of samples) {
+      const distance = Math.min(...centers.map((center) => rgbDistance(data, sample, center)));
+      if (distance > farthestDistance) {
+        farthest = sample;
+        farthestDistance = distance;
+      }
+    }
+    centers.push(farthest);
+  }
+  return centers;
+}
+
+function largestComponentWithin(mask: Uint8Array, width: number, height: number): number[] {
+  const visited = new Uint8Array(width * height);
+  let best: number[] = [];
+  for (let index = 0; index < mask.length; index++) {
+    if (!mask[index] || visited[index]) continue;
+    const queue = [index];
+    const component: number[] = [];
+    visited[index] = 1;
+    let head = 0;
+    while (head < queue.length) {
+      const current = queue[head++];
+      component.push(current);
+      const x = current % width;
+      const y = Math.floor(current / width);
+      const neighbors = [
+        x > 0 ? current - 1 : -1,
+        x + 1 < width ? current + 1 : -1,
+        y > 0 ? current - width : -1,
+        y + 1 < height ? current + width : -1,
+      ];
+      for (const next of neighbors) {
+        if (next >= 0 && mask[next] && !visited[next]) {
+          visited[next] = 1;
+          queue.push(next);
+        }
+      }
+    }
+    if (component.length > best.length) best = component;
+  }
+  return best;
+}
+
 export default function SubjectMaskEditor({
   imageUrl,
   loading,
@@ -58,6 +164,7 @@ export default function SubjectMaskEditor({
   const maskRef = useRef<SubjectMask | null>(null);
   const savedMaskRef = useRef<SubjectMask | null>(savedMask ?? null);
   const isDrawingRef = useRef(false);
+  const lassoPointsRef = useRef<MaskPoint[]>([]);
   const [internalMode, setInternalMode] = useState<MaskMode>("select");
   const [brushSize, setBrushSize] = useState(16);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
@@ -98,6 +205,21 @@ export default function SubjectMaskEditor({
     if (!overlayCtx) return;
     overlayCtx.putImageData(overlay, 0, 0);
     ctx.drawImage(overlayCanvas, 0, 0);
+
+    const lassoPoints = lassoPointsRef.current;
+    if (lassoPoints.length > 1) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
+      for (let i = 1; i < lassoPoints.length; i++) {
+        ctx.lineTo(lassoPoints[i].x, lassoPoints[i].y);
+      }
+      ctx.strokeStyle = "#8f1d21";
+      ctx.lineWidth = Math.max(2, Math.round(subject.width / 320));
+      ctx.setLineDash([8, 5]);
+      ctx.stroke();
+      ctx.restore();
+    }
   }, []);
 
   const publish = useCallback(() => {
@@ -224,6 +346,62 @@ export default function SubjectMaskEditor({
     publish();
   }, [draw, publish, saveSnapshot]);
 
+  const recognizeSubjectInsideLasso = useCallback(() => {
+    const subject = maskRef.current;
+    const points = lassoPointsRef.current;
+    if (!subject || points.length < LASSO_MIN_POINTS) return;
+
+    const minX = Math.max(0, Math.floor(Math.min(...points.map((point) => point.x))));
+    const maxX = Math.min(subject.width - 1, Math.ceil(Math.max(...points.map((point) => point.x))));
+    const minY = Math.max(0, Math.floor(Math.min(...points.map((point) => point.y))));
+    const maxY = Math.min(subject.height - 1, Math.ceil(Math.max(...points.map((point) => point.y))));
+    const inside = new Uint8Array(subject.width * subject.height);
+    const insideIndices: number[] = [];
+    const boundaryIndices: number[] = [];
+
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        if (!isPointInsidePolygon(x + 0.5, y + 0.5, points)) continue;
+        const index = y * subject.width + x;
+        inside[index] = 1;
+        insideIndices.push(index);
+      }
+    }
+    if (insideIndices.length === 0) return;
+
+    for (const index of insideIndices) {
+      const x = index % subject.width;
+      const y = Math.floor(index / subject.width);
+      const touchesOutside = x === minX || x === maxX || y === minY || y === maxY
+        || !inside[index - 1]
+        || !inside[index + 1]
+        || !inside[index - subject.width]
+        || !inside[index + subject.width];
+      if (touchesOutside) boundaryIndices.push(index);
+    }
+    const backgroundPalette = buildPaletteFromIndices(subject.imageData.data, boundaryIndices.length ? boundaryIndices : insideIndices, 5);
+    if (backgroundPalette.length === 0) return;
+
+    const distances = new Float32Array(subject.width * subject.height);
+    const values: number[] = [];
+    for (const index of insideIndices) {
+      const distance = Math.min(...backgroundPalette.map((background) => rgbDistance(subject.imageData.data, index, background)));
+      distances[index] = distance;
+      values.push(distance);
+    }
+    const threshold = otsu(values);
+    const candidate = new Uint8Array(subject.width * subject.height);
+    for (const index of insideIndices) {
+      if (distances[index] > threshold) candidate[index] = 1;
+    }
+
+    const component = largestComponentWithin(candidate, subject.width, subject.height);
+    for (const index of component) subject.mask[index] = 1;
+    draw();
+    saveSnapshot();
+    publish();
+  }, [draw, publish, saveSnapshot]);
+
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
     const point = getCanvasPoint(event.clientX, event.clientY);
     if (!point || !maskRef.current) return;
@@ -234,25 +412,47 @@ export default function SubjectMaskEditor({
       return;
     }
 
+    if (activeMode === "lasso") {
+      isDrawingRef.current = true;
+      lassoPointsRef.current = [point];
+      draw();
+      return;
+    }
+
     isDrawingRef.current = true;
     applyBrush(point.x, point.y, activeMode === "add" ? 1 : 0);
-  }, [activeMode, applyBrush, getCanvasPoint, selectConnectedSubject]);
+  }, [activeMode, applyBrush, draw, getCanvasPoint, selectConnectedSubject]);
 
   const handlePointerMove = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isDrawingRef.current || activeMode === "select") return;
     const point = getCanvasPoint(event.clientX, event.clientY);
     if (!point) return;
+    if (activeMode === "lasso") {
+      const prev = lassoPointsRef.current[lassoPointsRef.current.length - 1];
+      if (!prev || Math.hypot(prev.x - point.x, prev.y - point.y) >= 2) {
+        lassoPointsRef.current.push(point);
+        draw();
+      }
+      return;
+    }
     applyBrush(point.x, point.y, activeMode === "add" ? 1 : 0);
-  }, [activeMode, applyBrush, getCanvasPoint]);
+  }, [activeMode, applyBrush, draw, getCanvasPoint]);
 
   const handlePointerUp = useCallback(() => {
     if (!isDrawingRef.current) return;
     isDrawingRef.current = false;
+    if (activeMode === "lasso") {
+      recognizeSubjectInsideLasso();
+      lassoPointsRef.current = [];
+      draw();
+      return;
+    }
     publish();
-  }, [publish]);
+  }, [activeMode, draw, publish, recognizeSubjectInsideLasso]);
 
   const resetMask = useCallback(() => {
     if (!imageUrl) return;
+    lassoPointsRef.current = [];
     createSubjectMask(imageUrl, { autoDetect }).then((subject) => {
       maskRef.current = cloneSubjectMask(subject);
       saveSnapshot();
@@ -282,6 +482,7 @@ export default function SubjectMaskEditor({
               { id: "select", label: "鼠标" },
               { id: "add", label: "增加" },
               { id: "subtract", label: "减少" },
+              { id: "lasso", label: "画圈" },
             ].map((item) => (
               <button
                 key={item.id}
@@ -304,7 +505,7 @@ export default function SubjectMaskEditor({
               step={1}
               value={brushSize}
               onChange={(event) => setBrushSize(Number(event.target.value))}
-              disabled={activeMode === "select"}
+              disabled={activeMode === "select" || activeMode === "lasso"}
               className="w-24 accent-[#8f1d21] disabled:opacity-50"
             />
             <span className="w-9 tabular-nums">{brushSize}px</span>
@@ -320,7 +521,7 @@ export default function SubjectMaskEditor({
           <>
             <canvas
               ref={canvasRef}
-              className={`block max-h-[520px] w-full object-contain ${activeMode === "select" ? "cursor-crosshair" : "cursor-none"}`}
+              className={`block max-h-[520px] w-full object-contain ${activeMode === "select" || activeMode === "lasso" ? "cursor-crosshair" : "cursor-none"}`}
               style={{ touchAction: "none" }}
               onPointerDown={handlePointerDown}
               onPointerMove={(event) => {
@@ -338,7 +539,7 @@ export default function SubjectMaskEditor({
                 handlePointerUp();
               }}
             />
-            {activeMode !== "select" && cursor && maskRef.current && canvasRef.current && (
+            {activeMode !== "select" && activeMode !== "lasso" && cursor && maskRef.current && canvasRef.current && (
               <div
                 className={`pointer-events-none absolute rounded-full border-2 ${
                   activeMode === "add" ? "border-emerald-500 bg-emerald-400/15" : "border-red-500 bg-red-400/15"
