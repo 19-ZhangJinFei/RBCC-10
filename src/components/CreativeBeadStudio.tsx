@@ -848,9 +848,6 @@ export default function CreativeBeadStudio() {
   const [resultMaskSnapshot, setResultMaskSnapshot] = useState<SubjectMask | null>(null);
   const [costDropdownOpen, setCostDropdownOpen] = useState(false);
   const [timeDropdownOpen, setTimeDropdownOpen] = useState(false);
-  const [planPrompt, setPlanPrompt] = useState<string | null>(null);
-  const [aiPlanText, setAiPlanText] = useState<string | null>(null);
-  const [planLoading, setPlanLoading] = useState(false);
   const [culturePrompt, setCulturePrompt] = useState<string | null>(null);
   const [cultureTextLoading, setCultureTextLoading] = useState(false);
   const [aiCultureCopy, setAiCultureCopy] = useState<{
@@ -953,41 +950,6 @@ export default function CreativeBeadStudio() {
     setResultMaskSnapshot(null);
     setResultMaskMode("select");
   }, []);
-
-  const generatePlanText = useCallback(async () => {
-    if (!pattern || beadCounts.length === 0) {
-      setToastType("warning");
-      setToastMsg("请先生成拼豆图纸。");
-      return;
-    }
-    setPlanLoading(true);
-    try {
-      const response = await fetch("/api/generate-plan-text", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          theme,
-          element,
-          meaning,
-          product: formLabel,
-          gridWidth: pattern.width,
-          gridHeight: pattern.height,
-          gridSize,
-          colorCount,
-          beadCounts,
-          imageUrl: patternUrl,
-        }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result?.error ?? "制作方案生成失败");
-      setAiPlanText(result.planText);
-      setPlanPrompt(result.prompt);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "制作方案生成失败");
-    } finally {
-      setPlanLoading(false);
-    }
-  }, [pattern, beadCounts, theme, element, meaning, formLabel, gridSize, colorCount, patternUrl]);
 
   const generateCultureText = useCallback(async () => {
     if (!pattern || beadCounts.length === 0) {
@@ -1852,7 +1814,7 @@ export default function CreativeBeadStudio() {
     const total = beadCounts.reduce((sum, item) => sum + item.count, 0);
     const beadingMinutes = estimateBeadingMinutes(total, beadCounts.length);
     const cost = estimateMaterialCost(total, beadCounts.length);
-    const planText = aiPlanText || [
+    const planText = [
       `${copy.title} 拼豆制作方案`,
       "",
       `作品形式：${formLabel}`,
@@ -1883,24 +1845,6 @@ export default function CreativeBeadStudio() {
       "3. 豆孔略收缩且相邻豆粒连接即可停止，避免过熨导致图案变形。",
       "4. 熨完后用平整重物压 2-3 分钟，冷却后再从模板上取下。",
     ].join("\n");
-
-    const parsedPlan = aiPlanText
-      ? (() => {
-          const sections = aiPlanText.split(/【(.+?)】/).filter(Boolean);
-          const result: Record<string, string> = {};
-          for (let i = 0; i < sections.length - 1; i += 2) {
-            result[sections[i]] = (sections[i + 1] || '').trim();
-          }
-          return result;
-        })()
-      : null;
-
-    const renderPlanSection = (title: string, content: string) => (
-      <div className="rounded-lg border border-stone-200 bg-white p-5">
-        <h3 className="text-lg font-semibold">{title}</h3>
-        <div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-stone-600">{content}</div>
-      </div>
-    );
 
     return (
       <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
@@ -1935,7 +1879,8 @@ export default function CreativeBeadStudio() {
                   <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-md border border-stone-200 bg-white p-3 shadow-lg">
                     <p className="text-xs font-medium text-stone-500">用时组成</p>
                     <ul className="mt-2 space-y-1 text-xs text-stone-600">
-                      <li className="flex justify-between"><span>摆豆（{total} 颗 × {BEAD_TIME_PER_PIECE} 分钟/颗）</span><span>≈{Math.round(total * BEAD_TIME_PER_PIECE)} 分钟</span></li>
+                      <li className="flex justify-between"><span>单颗摆豆时间</span><span>{BEAD_TIME_PER_PIECE} 分钟/颗</span></li>
+                      <li className="flex justify-between"><span>摆豆总计（{total} 颗）</span><span>≈{Math.round(total * BEAD_TIME_PER_PIECE)} 分钟</span></li>
                       <li className="flex justify-between"><span>换色（{beadCounts.length} 色 × 4 分钟/色）</span><span>{beadCounts.length * 4} 分钟</span></li>
                       <li className="flex justify-between"><span>熨烫（含预热、熨烫、冷却）</span><span>{IRONING_TIME} 分钟</span></li>
                       <li className="mt-1 border-t border-stone-100 pt-1 font-medium"><span>合计</span><span>约 {beadingMinutes} 分钟</span></li>
