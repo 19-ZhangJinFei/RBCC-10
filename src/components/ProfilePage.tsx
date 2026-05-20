@@ -17,6 +17,7 @@ import {
 } from "@/utils/profileStorage";
 import AvatarCropper from "@/components/AvatarCropper";
 import LoginModal from "@/components/LoginModal";
+import { publishCommunityPost } from "@/utils/communityForum";
 
 type Props = {
   onBack: () => void;
@@ -42,6 +43,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout }: Prop
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchMode, setBatchMode] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [publishMessage, setPublishMessage] = useState<string | null>(null);
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -144,6 +146,25 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout }: Prop
       case "pdf": alert("请进入作品后，在「场景预览」步骤使用打印/PDF 导出。"); break;
     }
   }, []);
+
+  const handlePublish = useCallback(async (record: ProjectRecord) => {
+    try {
+      await publishCommunityPost({
+        record,
+        author: profile.nickname || "豆韵用户",
+        avatar: profile.avatarUrl,
+      });
+      setPublishMessage("作品已发布到云端社区");
+    } catch (err) {
+      setPublishMessage(err instanceof Error ? err.message : "作品发布失败");
+    }
+  }, [profile.avatarUrl, profile.nickname]);
+
+  useEffect(() => {
+    if (!publishMessage) return;
+    const timer = setTimeout(() => setPublishMessage(null), 3000);
+    return () => clearTimeout(timer);
+  }, [publishMessage]);
 
   const isLoggedIn = !!loadCurrentUser();
   const currentTextOption = TEXT_MODEL_OPTIONS.find(m => m.name === apiConfig.textModelName);
@@ -355,6 +376,11 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout }: Prop
               </button>
             )}
           </div>
+          {publishMessage && (
+            <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              {publishMessage}
+            </div>
+          )}
 
           {history.length === 0 ? (
             <div className="mt-6 grid place-items-center rounded-lg border border-dashed border-stone-300 py-16 text-sm text-stone-400">暂无作品记录</div>
@@ -383,6 +409,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout }: Prop
                     onToggleSelect={batchMode ? () => toggleSelect(record.id) : undefined}
                     onRestore={() => { if (!batchMode) onRestoreProject(record); }}
                     onExport={(f) => handleExport(record, f)}
+                    onPublish={() => handlePublish(record)}
                     onDelete={() => { deleteProjectRecord(record.id); setHistory(loadProjectHistory()); }}
                   />
                 ))}
@@ -446,12 +473,13 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout }: Prop
   );
 }
 
-function ProjectCard({ record, selected, onToggleSelect, onRestore, onExport, onDelete }: {
+function ProjectCard({ record, selected, onToggleSelect, onRestore, onExport, onPublish, onDelete }: {
   record: ProjectRecord;
   selected?: boolean;
   onToggleSelect?: () => void;
   onRestore: () => void;
   onExport: (f: "png" | "preview" | "csv" | "pdf") => void;
+  onPublish: () => void;
   onDelete: () => void;
 }) {
   const [showMenu, setShowMenu] = useState(false);
@@ -492,6 +520,7 @@ function ProjectCard({ record, selected, onToggleSelect, onRestore, onExport, on
                 <MenuItem onClick={() => { onExport("pdf"); setShowMenu(false); }}>📝 导出 PDF</MenuItem>
                 <hr className="my-1 border-stone-200" />
                 <MenuItem onClick={() => { onRestore(); setShowMenu(false); }}>📂 恢复进度</MenuItem>
+                <MenuItem onClick={() => { onPublish(); setShowMenu(false); }}>发布到社区</MenuItem>
                 <MenuItem onClick={() => { if (confirm("确定删除？")) { onDelete(); setShowMenu(false); } }} className="text-red-600">🗑️ 删除记录</MenuItem>
               </div>
             </>

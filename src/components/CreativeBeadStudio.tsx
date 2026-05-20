@@ -9,8 +9,10 @@ import LoginModal from "@/components/LoginModal";
 import AiChatPanel from "@/components/ai/AiChatPanel";
 import FloatingAiButton from "@/components/ai/FloatingAiButton";
 import { clearAiChatHistory } from "@/utils/aiChat";
-import { saveProjectRecord, loadProjectHistory, loadCurrentUserProfile, type StoredUser } from "@/utils/profileStorage";
+import { saveProjectRecord, loadCurrentUserProfile, type StoredUser } from "@/utils/profileStorage";
+import { fetchCommunityPosts, publishCommunityPost } from "@/utils/communityForum";
 import type { ProjectRecord } from "@/types/projectTypes";
+import type { CommunityPost as CloudCommunityPost } from "@/types/community";
 import { type AspectRatioId, aspectRatios } from "@/data/aspectRatios";
 import { cultureThemes } from "@/data/cultureThemes";
 import { getProductTemplate } from "@/data/productTemplates";
@@ -798,38 +800,28 @@ export default function CreativeBeadStudio() {
   const [communityQuery, setCommunityQuery] = useState("");
   const [communityRefresh, setCommunityRefresh] = useState(0);
   const [selectedCommunityPost, setSelectedCommunityPost] = useState<CommunityPost | null>(null);
+  const [cloudCommunityPosts, setCloudCommunityPosts] = useState<CloudCommunityPost[]>([]);
+  const [communityLoading, setCommunityLoading] = useState(false);
+  const [communityError, setCommunityError] = useState<string | null>(null);
 
   const communityPosts = useMemo<CommunityPost[]>(() => {
-    void communityRefresh;
-    const historyPosts = loadProjectHistory().map((record, index): CommunityPost => ({
-      id: `project_${record.id}`,
+    const cloudPosts = cloudCommunityPosts.map((post): CommunityPost => ({
+      ...post,
       type: "project",
-      record,
-      title: record.title || `${record.theme} · ${record.element}`,
-      author: currentUser?.nickname ?? "豆韵用户",
-      avatar: currentUser?.avatarUrl?.startsWith("emoji:")
-        ? currentUser.avatarUrl.slice(6)
-        : currentUser?.nickname?.slice(0, 1) ?? "豆",
-      createdAt: record.updatedAt || record.createdAt,
-      theme: record.theme,
-      element: record.element,
-      meaning: record.meaning ?? "",
-      colors: showcase[index % showcase.length]?.colors ?? ["#FFFFFF", "#1557A8", "#943630", "#EDB045"],
-      productId: record.productId,
     }));
     const query = communityQuery.trim().toLowerCase();
-    const templatePosts = communityTemplates.map((template): CommunityPost => ({
-      ...template,
-      type: "template",
-    }));
-    return [...historyPosts, ...templatePosts]
-      .sort((a, b) => b.createdAt - a.createdAt)
-      .filter((post) => {
+    const templatePosts = communityTemplates
+      .filter((template) => {
         if (!query) return true;
-        return [post.title, post.author, post.theme, post.element, post.meaning]
+        return [template.title, template.author, template.theme, template.element, template.meaning]
           .some((value) => value.toLowerCase().includes(query));
-      });
-  }, [communityQuery, communityRefresh, currentUser]);
+      })
+      .map((template): CommunityPost => ({
+        ...template,
+        type: "template",
+      }));
+    return [...cloudPosts, ...templatePosts].sort((a, b) => b.createdAt - a.createdAt);
+  }, [cloudCommunityPosts, communityQuery]);
 
   const restoringRef = useRef(false);
 
@@ -905,6 +897,25 @@ export default function CreativeBeadStudio() {
   }, [toastMsg]);
 
   // 检查是否有未保存的进度
+  useEffect(() => {
+    let alive = true;
+    setCommunityLoading(true);
+    setCommunityError(null);
+    fetchCommunityPosts(communityQuery)
+      .then((posts) => {
+        if (alive) setCloudCommunityPosts(posts);
+      })
+      .catch((err) => {
+        if (alive) setCommunityError(err instanceof Error ? err.message : "社区作品加载失败");
+      })
+      .finally(() => {
+        if (alive) setCommunityLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [communityQuery, communityRefresh]);
+
   const hasUnsavedWork = !!(sourceImageUrl || pattern || patternUrl);
 
   const clearPatternArtifacts = useCallback(() => {
@@ -1847,7 +1858,7 @@ export default function CreativeBeadStudio() {
     productSceneUrl: null,
   }), [antiAlias, aspectRatio, cleanPatternUrl, colorCount, element, extractedImageUrl, gridSize, meaning, pattern, patternUrl, productId, showGrid, sourceImageUrl, step, theme]);
 
-  const publishCurrentWork = useCallback(() => {
+  const publishCurrentWork = useCallback(async () => {
     if (!sourceImageUrl && !pattern && !patternUrl) {
       setToastType("warning");
       setToastMsg("请先完成一个作品进度后再发布。");
@@ -1855,11 +1866,22 @@ export default function CreativeBeadStudio() {
     }
     const record = buildCurrentProjectRecord(`${theme} · ${element}`);
     saveProjectRecord(record);
-    setCommunityRefresh((value) => value + 1);
-    setToastType("success");
-    setToastMsg("作品已发布到社区，并同步保存到个人主页。");
-    setView("community");
-  }, [buildCurrentProjectRecord, element, pattern, patternUrl, sourceImageUrl, theme]);
+    try {
+      await publishCommunityPost({
+        record,
+        author: currentUser?.nickname ?? "豆韵用户",
+        avatar: currentUser?.avatarUrl ?? "",
+        colors: forcedColors,
+      });
+      setCommunityRefresh((value) => value + 1);
+      setToastType("success");
+      setToastMsg("作品已发布到云端社区，并同步保存到个人主页。");
+      setView("community");
+    } catch (err) {
+      setToastType("warning");
+      setToastMsg(err instanceof Error ? err.message : "作品发布失败");
+    }
+  }, [buildCurrentProjectRecord, currentUser, element, forcedColors, pattern, patternUrl, sourceImageUrl, theme]);
 
   const importCommunityPost = useCallback((post: CommunityPost) => {
     if (post.record) {
@@ -2171,7 +2193,7 @@ export default function CreativeBeadStudio() {
               <p className="text-sm font-semibold text-[#8f1d21]">社区论坛</p>
               <h1 className="mt-2 text-4xl font-semibold tracking-tight text-stone-950">作品分享与模板导入</h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-stone-600">
-                浏览用户发布的拼豆作品，按主题、作者或作品名称搜索。点击作品进入预览后，可一键导入为自己的创作进度。
+                云端同步不同用户发布的拼豆作品，按主题、作者或作品名称搜索。点击作品进入预览后，可一键导入为自己的创作进度。
               </p>
             </div>
             <button
@@ -2207,7 +2229,10 @@ export default function CreativeBeadStudio() {
               >
                 <div className="flex items-center gap-3">
                   <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full bg-[#8f1d21] text-sm font-semibold text-white">
-                    {post.avatar}
+                    {post.avatar.startsWith("data:") ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={post.avatar} alt="" className="h-full w-full object-cover" />
+                    ) : post.avatar}
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-stone-900">{post.author}</p>
@@ -2229,7 +2254,19 @@ export default function CreativeBeadStudio() {
             ))}
           </div>
 
-          {communityPosts.length === 0 && (
+          {communityLoading && (
+            <div className="mt-10 rounded-lg border border-stone-200 bg-white p-8 text-center text-sm text-stone-500">
+              正在加载云端社区作品...
+            </div>
+          )}
+
+          {communityError && (
+            <div className="mt-10 rounded-lg border border-red-200 bg-red-50 p-8 text-center text-sm text-red-700">
+              {communityError}
+            </div>
+          )}
+
+          {!communityLoading && !communityError && communityPosts.length === 0 && (
             <div className="mt-10 rounded-lg border border-dashed border-stone-300 bg-white p-10 text-center text-sm text-stone-500">
               没有找到匹配的作品。
             </div>
@@ -2250,7 +2287,10 @@ export default function CreativeBeadStudio() {
             <div className="overflow-y-auto p-6">
               <div className="flex items-center gap-3 pr-20">
                 <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#8f1d21] text-sm font-semibold text-white">
-                  {selectedCommunityPost.avatar}
+                  {selectedCommunityPost.avatar.startsWith("data:") ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={selectedCommunityPost.avatar} alt="" className="h-full w-full object-cover" />
+                  ) : selectedCommunityPost.avatar}
                 </span>
                 <div>
                   <h2 className="text-2xl font-semibold text-stone-950">{selectedCommunityPost.title}</h2>
