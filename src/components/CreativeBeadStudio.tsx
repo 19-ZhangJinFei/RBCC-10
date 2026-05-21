@@ -826,10 +826,12 @@ export default function CreativeBeadStudio() {
   const [resultSubjectAnalysis, setResultSubjectAnalysis] = useState<SubjectAnalysis | null>(null);
   const [resultMaskMode, setResultMaskMode] = useState<MaskMode>("select");
   const [resultMaskSnapshot, setResultMaskSnapshot] = useState<SubjectMask | null>(null);
+  const [resultMaskSyncVersion, setResultMaskSyncVersion] = useState(0);
   const [costDropdownOpen, setCostDropdownOpen] = useState(false);
   const [timeDropdownOpen, setTimeDropdownOpen] = useState(false);
   const [culturePrompt, setCulturePrompt] = useState<string | null>(null);
   const [cultureTextLoading, setCultureTextLoading] = useState(false);
+  const subjectIdentificationAutoKeyRef = useRef<string | null>(null);
   const [aiCultureCopy, setAiCultureCopy] = useState<{
     title: string;
     source: string;
@@ -929,6 +931,7 @@ export default function CreativeBeadStudio() {
     setResultSubjectAnalysis(null);
     setResultMaskSnapshot(null);
     setResultMaskMode("select");
+    setResultMaskSyncVersion((value) => value + 1);
   }, []);
 
   const clearSubjectIdentification = useCallback(() => {
@@ -1176,10 +1179,19 @@ export default function CreativeBeadStudio() {
     setSubjectIdentification(null);
     setSubjectIdentificationPrompt(null);
     if (directOutputRef.current) {
+      setResultSubjectAnalysis(analysis);
       setSubjectDirty(false);
       return;
     }
     setSubjectDirty(true);
+  }, []);
+
+  const handleSourceMaskSnapshotChange = useCallback((mask: SubjectMask | null) => {
+    setSubjectMaskSnapshot(mask);
+    if (directOutputRef.current) {
+      setResultMaskSnapshot(mask);
+      setResultMaskSyncVersion((value) => value + 1);
+    }
   }, []);
 
   const identifySubject = useCallback(async () => {
@@ -1210,6 +1222,13 @@ export default function CreativeBeadStudio() {
       setSubjectIdentificationLoading(false);
     }
   }, [subjectAnalysis]);
+
+  useEffect(() => {
+    if (!subjectAnalysis || subjectIdentification || subjectIdentificationLoading) return;
+    if (subjectIdentificationAutoKeyRef.current === subjectAnalysis.subjectImageUrl) return;
+    subjectIdentificationAutoKeyRef.current = subjectAnalysis.subjectImageUrl;
+    void identifySubject();
+  }, [identifySubject, subjectAnalysis, subjectIdentification, subjectIdentificationLoading]);
 
   const generateSubjectRecreation = useCallback(async () => {
     if (directOutputRef.current) return;
@@ -1606,12 +1625,12 @@ export default function CreativeBeadStudio() {
             <SubjectMaskEditor
               imageUrl={sourceImageUrl}
               loading={loading}
-              autoDetect={!directGeneratedImage}
+              autoDetect={true}
               mode={subjectMaskMode}
               savedMask={subjectMaskSnapshot}
               onModeChange={setSubjectMaskMode}
               onSubjectChange={handleSubjectAnalysis}
-              onMaskSnapshotChange={setSubjectMaskSnapshot}
+              onMaskSnapshotChange={handleSourceMaskSnapshotChange}
             />
             <div className="mt-4 flex flex-wrap gap-3">
               <button type="button" onClick={handleGenerateAI} disabled={loading} className="rounded-md bg-[#8f1d21] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
@@ -1628,7 +1647,7 @@ export default function CreativeBeadStudio() {
             </div>
           </section>
           <div className="space-y-5">
-            {!directGeneratedImage && renderSubjectIdentificationEditor("extract")}
+            {renderSubjectIdentificationEditor("extract")}
             {!directGeneratedImage && (
               <section className="rounded-lg border border-stone-200 bg-white p-5">
                 <h2 className="text-xl font-semibold">AI 再创作</h2>
@@ -1667,6 +1686,7 @@ export default function CreativeBeadStudio() {
               <h2 className="text-xl font-semibold">创作结果</h2>
               <div className="mt-4">
                 <SubjectMaskEditor
+                  key={`${extractedImageUrl ?? "empty"}-${directGeneratedImage ? resultMaskSyncVersion : 0}`}
                   imageUrl={extractedImageUrl}
                   loading={loading}
                   autoDetect={false}

@@ -8,8 +8,9 @@ import {
   type SubjectMask,
 } from "@/utils/subjectAnalysis";
 
-export type MaskMode = "select" | "add" | "subtract" | "lasso";
+export type MaskMode = "select" | "add" | "subtract" | "box";
 type MaskPoint = { x: number; y: number };
+type SelectionBox = { start: MaskPoint; end: MaskPoint };
 
 type Props = {
   imageUrl: string | null;
@@ -24,7 +25,7 @@ type Props = {
 };
 
 const BRUSH_SIZES = [8, 16, 24, 36, 48];
-const LASSO_MIN_POINTS = 8;
+const MIN_BOX_SIZE = 4;
 
 function rgbDistance(data: Uint8ClampedArray, a: number, b: number): number {
   const ai = a * 4;
@@ -43,18 +44,6 @@ function cloneSubjectMask(mask: SubjectMask): SubjectMask {
     width: mask.width,
     height: mask.height,
   };
-}
-
-function isPointInsidePolygon(x: number, y: number, polygon: MaskPoint[]): boolean {
-  let inside = false;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const pi = polygon[i];
-    const pj = polygon[j];
-    const intersects = (pi.y > y) !== (pj.y > y)
-      && x < ((pj.x - pi.x) * (y - pi.y)) / (pj.y - pi.y) + pi.x;
-    if (intersects) inside = !inside;
-  }
-  return inside;
 }
 
 function otsu(values: number[]): number {
@@ -164,7 +153,7 @@ export default function SubjectMaskEditor({
   const maskRef = useRef<SubjectMask | null>(null);
   const savedMaskRef = useRef<SubjectMask | null>(savedMask ?? null);
   const isDrawingRef = useRef(false);
-  const lassoPointsRef = useRef<MaskPoint[]>([]);
+  const selectionBoxRef = useRef<SelectionBox | null>(null);
   const [internalMode, setInternalMode] = useState<MaskMode>("select");
   const [brushSize, setBrushSize] = useState(16);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
@@ -206,18 +195,19 @@ export default function SubjectMaskEditor({
     overlayCtx.putImageData(overlay, 0, 0);
     ctx.drawImage(overlayCanvas, 0, 0);
 
-    const lassoPoints = lassoPointsRef.current;
-    if (lassoPoints.length > 1) {
+    const selectionBox = selectionBoxRef.current;
+    if (selectionBox) {
+      const minX = Math.min(selectionBox.start.x, selectionBox.end.x);
+      const maxX = Math.max(selectionBox.start.x, selectionBox.end.x);
+      const minY = Math.min(selectionBox.start.y, selectionBox.end.y);
+      const maxY = Math.max(selectionBox.start.y, selectionBox.end.y);
       ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
-      for (let i = 1; i < lassoPoints.length; i++) {
-        ctx.lineTo(lassoPoints[i].x, lassoPoints[i].y);
-      }
+      ctx.fillStyle = "rgba(143, 29, 33, 0.08)";
       ctx.strokeStyle = "#8f1d21";
       ctx.lineWidth = Math.max(2, Math.round(subject.width / 320));
       ctx.setLineDash([8, 5]);
-      ctx.stroke();
+      ctx.fillRect(minX, minY, maxX - minX, maxY - minY);
+      ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
       ctx.restore();
     }
   }, []);
@@ -346,22 +336,23 @@ export default function SubjectMaskEditor({
     publish();
   }, [draw, publish, saveSnapshot]);
 
-  const recognizeSubjectInsideLasso = useCallback(() => {
+  const recognizeSubjectInsideBox = useCallback(() => {
     const subject = maskRef.current;
-    const points = lassoPointsRef.current;
-    if (!subject || points.length < LASSO_MIN_POINTS) return;
+    const selectionBox = selectionBoxRef.current;
+    if (!subject || !selectionBox) return;
 
-    const minX = Math.max(0, Math.floor(Math.min(...points.map((point) => point.x))));
-    const maxX = Math.min(subject.width - 1, Math.ceil(Math.max(...points.map((point) => point.x))));
-    const minY = Math.max(0, Math.floor(Math.min(...points.map((point) => point.y))));
-    const maxY = Math.min(subject.height - 1, Math.ceil(Math.max(...points.map((point) => point.y))));
+    const minX = Math.max(0, Math.floor(Math.min(selectionBox.start.x, selectionBox.end.x)));
+    const maxX = Math.min(subject.width - 1, Math.ceil(Math.max(selectionBox.start.x, selectionBox.end.x)));
+    const minY = Math.max(0, Math.floor(Math.min(selectionBox.start.y, selectionBox.end.y)));
+    const maxY = Math.min(subject.height - 1, Math.ceil(Math.max(selectionBox.start.y, selectionBox.end.y)));
+    if (maxX - minX < MIN_BOX_SIZE || maxY - minY < MIN_BOX_SIZE) return;
+
     const inside = new Uint8Array(subject.width * subject.height);
     const insideIndices: number[] = [];
     const boundaryIndices: number[] = [];
 
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
-        if (!isPointInsidePolygon(x + 0.5, y + 0.5, points)) continue;
         const index = y * subject.width + x;
         inside[index] = 1;
         insideIndices.push(index);
@@ -412,9 +403,9 @@ export default function SubjectMaskEditor({
       return;
     }
 
-    if (activeMode === "lasso") {
+    if (activeMode === "box") {
       isDrawingRef.current = true;
-      lassoPointsRef.current = [point];
+      selectionBoxRef.current = { start: point, end: point };
       draw();
       return;
     }
@@ -427,12 +418,10 @@ export default function SubjectMaskEditor({
     if (!isDrawingRef.current || activeMode === "select") return;
     const point = getCanvasPoint(event.clientX, event.clientY);
     if (!point) return;
-    if (activeMode === "lasso") {
-      const prev = lassoPointsRef.current[lassoPointsRef.current.length - 1];
-      if (!prev || Math.hypot(prev.x - point.x, prev.y - point.y) >= 2) {
-        lassoPointsRef.current.push(point);
-        draw();
-      }
+    if (activeMode === "box") {
+      const selectionBox = selectionBoxRef.current;
+      if (selectionBox) selectionBoxRef.current = { ...selectionBox, end: point };
+      draw();
       return;
     }
     applyBrush(point.x, point.y, activeMode === "add" ? 1 : 0);
@@ -441,18 +430,18 @@ export default function SubjectMaskEditor({
   const handlePointerUp = useCallback(() => {
     if (!isDrawingRef.current) return;
     isDrawingRef.current = false;
-    if (activeMode === "lasso") {
-      recognizeSubjectInsideLasso();
-      lassoPointsRef.current = [];
+    if (activeMode === "box") {
+      recognizeSubjectInsideBox();
+      selectionBoxRef.current = null;
       draw();
       return;
     }
     publish();
-  }, [activeMode, draw, publish, recognizeSubjectInsideLasso]);
+  }, [activeMode, draw, publish, recognizeSubjectInsideBox]);
 
   const resetMask = useCallback(() => {
     if (!imageUrl) return;
-    lassoPointsRef.current = [];
+    selectionBoxRef.current = null;
     createSubjectMask(imageUrl, { autoDetect }).then((subject) => {
       maskRef.current = cloneSubjectMask(subject);
       saveSnapshot();
@@ -482,7 +471,7 @@ export default function SubjectMaskEditor({
               { id: "select", label: "鼠标" },
               { id: "add", label: "增加" },
               { id: "subtract", label: "减少" },
-              { id: "lasso", label: "画圈" },
+              { id: "box", label: "框选" },
             ].map((item) => (
               <button
                 key={item.id}
@@ -505,7 +494,7 @@ export default function SubjectMaskEditor({
               step={1}
               value={brushSize}
               onChange={(event) => setBrushSize(Number(event.target.value))}
-              disabled={activeMode === "select" || activeMode === "lasso"}
+              disabled={activeMode === "select" || activeMode === "box"}
               className="w-24 accent-[#8f1d21] disabled:opacity-50"
             />
             <span className="w-9 tabular-nums">{brushSize}px</span>
@@ -521,7 +510,7 @@ export default function SubjectMaskEditor({
           <>
             <canvas
               ref={canvasRef}
-              className={`block max-h-[520px] w-full object-contain ${activeMode === "select" || activeMode === "lasso" ? "cursor-crosshair" : "cursor-none"}`}
+              className={`block max-h-[520px] w-full object-contain ${activeMode === "select" || activeMode === "box" ? "cursor-crosshair" : "cursor-none"}`}
               style={{ touchAction: "none" }}
               onPointerDown={handlePointerDown}
               onPointerMove={(event) => {
@@ -539,7 +528,7 @@ export default function SubjectMaskEditor({
                 handlePointerUp();
               }}
             />
-            {activeMode !== "select" && activeMode !== "lasso" && cursor && maskRef.current && canvasRef.current && (
+            {activeMode !== "select" && activeMode !== "box" && cursor && maskRef.current && canvasRef.current && (
               <div
                 className={`pointer-events-none absolute rounded-full border-2 ${
                   activeMode === "add" ? "border-emerald-500 bg-emerald-400/15" : "border-red-500 bg-red-400/15"
