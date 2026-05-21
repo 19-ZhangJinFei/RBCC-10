@@ -278,7 +278,7 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
             aria-label={loading ? "中断生成" : "发送"}
             title={loading ? "中断生成" : "发送"}
             className={loading
-              ? "grid h-11 w-11 shrink-0 place-items-center rounded-full bg-red-600 text-white shadow-sm transition hover:bg-red-700 disabled:opacity-50"
+              ? "grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#8f1d21] text-white shadow-sm transition hover:bg-[#a82428] disabled:opacity-50"
               : "rounded-lg bg-[#8f1d21] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             }
           >
