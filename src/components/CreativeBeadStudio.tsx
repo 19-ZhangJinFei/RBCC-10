@@ -35,7 +35,6 @@ import {
   type ColorFamily,
   type ImageFilter,
 } from "@/utils/colorSystemUtils";
-import { useAutoSave, saveAutoSaveInterval, loadAutoSaveInterval, formatAutoSaveInterval } from "@/hooks/useAutoSave";
 
 type SiteView = "home" | "start" | "projects" | "ai" | "community" | "faq" | "profile";
 type StudioStep = "config" | "extract" | "pattern" | "preview";
@@ -116,7 +115,6 @@ const showcase = [
     element: "莲花",
     meaning: "以青花瓷蓝白配色表现莲花的清雅与洁净，适合转译为轮廓简洁、留白明确的杯垫底稿。",
     colors: ["#FFFFFF", "#1557A8", "#3677D2", "#CDE8FF"],
-    imageUrl: "/images/莲花杯垫底稿.png",
   },
   {
     title: "敦煌飞天",
@@ -2361,29 +2359,6 @@ export default function CreativeBeadStudio() {
     refreshProjectRecords();
   }, [view, step, theme, element, meaning, productId, gridSize, colorCount, aspectRatio, showGrid, antiAlias, pattern, patternUrl, cleanPatternUrl, sourceImageUrl, extractedImageUrl, refreshProjectRecords]);
 
-  // 自动保存逻辑
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
-  
-  // 在创作过程中启用自动保存（view === "start" 且有工作进度时）
-  useEffect(() => {
-    if (view === "start" && hasUnsavedWork) {
-      setAutoSaveEnabled(true);
-    } else {
-      setAutoSaveEnabled(false);
-    }
-  }, [view, hasUnsavedWork]);
-
-  const doAutoSave = useCallback(() => {
-    if (!hasUnsavedWork) return;
-    const record = buildCurrentProjectRecord(`${theme} · ${element}`);
-    saveProjectRecord(record);
-    refreshProjectRecords();
-    setToastType("success");
-    setToastMsg("作品已自动保存 ✓");
-  }, [buildCurrentProjectRecord, element, hasUnsavedWork, refreshProjectRecords, theme]);
-
-  useAutoSave(doAutoSave, autoSaveEnabled);
-
   // 帮助页面：当 details 离开视口时自动收起
   useEffect(() => {
     if (view !== "faq") return;
@@ -2575,28 +2550,7 @@ export default function CreativeBeadStudio() {
                   }}
                   className="w-full rounded-lg border border-white/15 bg-white/8 p-5 text-left text-white transition hover:bg-white/15 hover:ring-2 hover:ring-[#f2c46d]"
                 >
-                  {item.imageUrl ? (
-                    <div className="relative aspect-square overflow-hidden rounded-md">
-                      <div className="home-pattern-scroll-vertical-track">
-                        {[0, 1].map((group) => (
-                          <div key={group} className="home-pattern-scroll-vertical-set">
-                            {[0, 1, 2].map((idx) => (
-                              <img
-                                key={idx}
-                                src={item.imageUrl!}
-                                alt={item.title}
-                                className="w-full flex-none rounded-md object-cover"
-                              />
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                      {/* 底部渐变遮罩 */}
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#2b2118] to-transparent" />
-                    </div>
-                  ) : (
-                    <PatternMiniature colors={item.colors} />
-                  )}
+                  <PatternMiniature colors={item.colors} />
                   <h2 className="mt-4 text-lg font-semibold">{item.title}</h2>
                   <p className="mt-1 text-sm text-stone-300">{item.theme}主题配色</p>
                 </button>
