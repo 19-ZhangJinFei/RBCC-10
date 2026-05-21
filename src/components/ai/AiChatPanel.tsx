@@ -80,6 +80,7 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
   const [showApiWarning, setShowApiWarning] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const resetTokenRef = useRef(resetToken);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     checkServerEnvConfig().then(() => {
@@ -98,11 +99,19 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
   useEffect(() => {
     if (resetTokenRef.current === resetToken) return;
     resetTokenRef.current = resetToken;
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
     setMessages(DEFAULT_CHAT_MESSAGES);
     setError(null);
     setInput("");
     setLoading(false);
   }, [resetToken]);
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
@@ -114,6 +123,9 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
     const userMsg: ChatMessage = { role: "user", content: text };
     const nextMessages = [...messages, userMsg];
     const assistantIndex = nextMessages.length;
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     setMessages([...nextMessages, { role: "assistant", content: "正在生成图像..." }]);
     setLoading(true);
 
@@ -134,8 +146,18 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
             ),
           );
         },
+        abortController.signal,
       );
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setMessages((prev) =>
+          prev.map((item, index) =>
+            index === assistantIndex ? { role: "assistant", content: "已中断生成。" } : item,
+          ),
+        );
+        return;
+      }
+
       const msg = err instanceof Error ? err.message : "发送失败，请重试";
       setError(msg);
       setMessages((prev) =>
@@ -145,8 +167,15 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
       );
     } finally {
       setLoading(false);
+      if (abortControllerRef.current === abortController) {
+        abortControllerRef.current = null;
+      }
     }
   }, [input, loading, messages]);
+
+  const handleInterrupt = useCallback(() => {
+    abortControllerRef.current?.abort();
+  }, []);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -168,7 +197,7 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
     >
       <div className="flex items-center justify-between rounded-t-lg bg-[#2b2118] px-5 py-3 text-white">
         <div className="flex items-center gap-2">
-          <span className="font-semibold">豆韵</span>
+          <span className="font-semibold">豆韵AI</span>
         </div>
         {!embedded && (
           <button
@@ -244,11 +273,16 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
           />
           <button
             type="button"
-            onClick={handleSend}
-            disabled={showApiWarning || loading || !input.trim()}
-            className="rounded-lg bg-[#8f1d21] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+            onClick={loading ? handleInterrupt : handleSend}
+            disabled={showApiWarning || (!loading && !input.trim())}
+            aria-label={loading ? "中断生成" : "生成图片"}
+            title={loading ? "中断生成" : "生成图片"}
+            className={loading
+              ? "grid h-11 w-11 shrink-0 place-items-center rounded-full bg-red-600 text-white shadow-sm transition hover:bg-red-700 disabled:opacity-50"
+              : "rounded-lg bg-[#8f1d21] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+            }
           >
-            发送
+            {loading ? <span className="h-3.5 w-3.5 rounded-[2px] bg-white" /> : "生成图片"}
           </button>
         </div>
       </div>
