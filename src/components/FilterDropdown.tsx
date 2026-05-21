@@ -60,9 +60,9 @@ export default function FilterDropdown({ value, onChange }: Props) {
       <button
         type="button"
         onClick={handleToggle}
-        className="flex items-center gap-1.5 rounded-md border border-stone-300 bg-white px-2.5 py-1.5 text-sm hover:bg-stone-50 transition whitespace-nowrap"
+        className="flex items-center gap-1.5 rounded-md border border-[#8f1d21] bg-[#8f1d21] px-2.5 py-1.5 text-sm text-white transition hover:bg-[#a82428] whitespace-nowrap"
       >
-        <span className="text-stone-700">{selected.name}</span>
+        <span>{selected.name}</span>
       </button>
 
       {/* 自定义下拉菜单 */}
