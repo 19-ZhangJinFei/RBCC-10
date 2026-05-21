@@ -59,8 +59,36 @@ body {
   }
 }
 
+/* 垂直滚动动画 - 用于首页精选主题图片滚动展示 */
+@keyframes home-pattern-scroll-vertical {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, -50%, 0);
+  }
+}
+
+.home-pattern-scroll-vertical-track {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  will-change: transform;
+  animation: home-pattern-scroll-vertical 18s linear infinite;
+}
+
+.home-pattern-scroll-vertical-set {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .home-pattern-scroll-track {
     animation-duration: 90s;
+  }
+  .home-pattern-scroll-vertical-track {
+    animation-duration: 60s;
   }
 }

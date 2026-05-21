@@ -18,6 +18,7 @@ import {
 import AvatarCropper from "@/components/AvatarCropper";
 import LoginModal from "@/components/LoginModal";
 import { publishCommunityPost } from "@/utils/communityForum";
+import { loadAutoSaveInterval, saveAutoSaveInterval, formatAutoSaveInterval } from "@/hooks/useAutoSave";
 
 type Props = {
   onBack: () => void;
@@ -47,6 +48,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout }: Prop
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [publishMessage, setPublishMessage] = useState<string | null>(null);
   const [publishMessageType, setPublishMessageType] = useState<"success" | "error">("success");
+  const [autoSaveInterval, setAutoSaveInterval] = useState(() => loadAutoSaveInterval());
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -407,6 +409,50 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout }: Prop
           <div className="mt-4 flex items-center gap-3">
             <button type="button" onClick={handleSaveApi} className="rounded-md bg-[#8f1d21] px-4 py-2 text-sm font-semibold text-white">保存配置</button>
             {saved && <span className="text-sm text-emerald-600">✓ 已保存到本地</span>}
+          </div>
+        </section>
+
+        {/* 自动保存设置 */}
+        <section className="rounded-lg border border-stone-200 bg-white p-6">
+          <h2 className="text-xl font-semibold">自动保存设置</h2>
+          <p className="mt-1 text-sm text-stone-500">
+            在创作过程中，系统将按照你设定的时间间隔自动保存作品。当前间隔：<strong className="text-[#8f1d21]">{formatAutoSaveInterval(autoSaveInterval)}</strong>
+          </p>
+          <div className="mt-5 space-y-4">
+            <div>
+              <label className="text-sm font-medium">
+                自动保存间隔：{formatAutoSaveInterval(autoSaveInterval)}
+              </label>
+              <input
+                type="range"
+                min={10}
+                max={300}
+                step={5}
+                value={autoSaveInterval / 1000}
+                onChange={(event) => {
+                  const ms = Number(event.target.value) * 1000;
+                  setAutoSaveInterval(ms);
+                  saveAutoSaveInterval(ms);
+                }}
+                className="mt-3 w-full"
+              />
+              <div className="mt-1 flex justify-between text-xs text-stone-400">
+                <span>10 秒</span>
+                <span>30 秒</span>
+                <span>1 分钟</span>
+                <span>2 分钟</span>
+                <span>5 分钟</span>
+              </div>
+            </div>
+            <div className="rounded-md bg-emerald-50 border border-emerald-100 p-3 text-sm text-emerald-800">
+              <p className="font-medium">💾 自动保存机制说明</p>
+              <ul className="mt-2 space-y-1 text-xs text-emerald-700">
+                <li>• 仅在创作过程中有未保存进度时才会触发自动保存</li>
+                <li>• 自动保存成功后会在页面顶部显示绿色提示</li>
+                <li>• 保存的作品可在「项目」页面中查看、恢复进度或继续编辑</li>
+                <li>• 间隔设为 10 秒可极致防护，但可能增加浏览器存储写入频率</li>
+              </ul>
+            </div>
           </div>
         </section>
 
