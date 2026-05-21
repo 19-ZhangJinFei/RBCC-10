@@ -707,7 +707,13 @@ function HomeCommunitySection({ setView }: { setView: (v: SiteView) => void }) {
               onClick={() => setView("community")}
               className={`mt-8 w-full rounded-lg border border-stone-200 bg-white p-6 text-left shadow-sm transition-all duration-700 hover:border-[#8f1d21]/50 hover:shadow-md ${visible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"}`}
             >
-              <PatternMiniature colors={["#FFFFFF", "#1557A8", "#943630", "#EDB045"]} />
+              <div className="grid max-w-md grid-cols-4 gap-3">
+                {showcase.slice(0, 4).map((item) => (
+                  <div key={item.title} className="rounded-md bg-stone-50 p-2 ring-1 ring-stone-200">
+                    <PatternMiniature colors={item.colors} />
+                  </div>
+                ))}
+              </div>
               <h3 className="mt-4 text-xl font-semibold">进入论坛</h3>
               <p className="mt-2 text-sm leading-6 text-stone-600">浏览大家发布的拼豆作品，搜索主题关键词，一键导入喜欢的模板继续创作。</p>
             </button>
