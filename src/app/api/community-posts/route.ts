@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "缺少作品记录" }, { status: 400 });
     }
 
-    const author = input.author?.trim() || "韵豆用户";
+    const author = input.author?.trim() || "豆韵用户";
     const record = compactRecord(input.record);
     const createdAt = Date.now();
     const post: CommunityPost = {

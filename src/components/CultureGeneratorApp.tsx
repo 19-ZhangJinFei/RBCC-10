@@ -265,12 +265,12 @@ export default function CultureGeneratorPage() {
             <p className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">
               AI 驱动的中华文创拼豆设计系统
             </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">韵豆</h1>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">豆韵</h1>
             <h2 className="mt-1 text-xl font-semibold text-slate-700 dark:text-slate-200">
               主题元素提取 · 拼豆底稿生成 · 文创产品场景预览
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-              韵豆：输入文化主题或上传图片，生成主题元素、拼豆底稿、材料清单、真实文创场景预览和作品说明。
+              豆韵：输入文化主题或上传图片，生成主题元素、拼豆底稿、材料清单、真实文创场景预览和作品说明。
             </p>
           </div>
         </header>

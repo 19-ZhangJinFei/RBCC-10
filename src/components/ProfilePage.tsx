@@ -38,7 +38,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
   const [showVisionKey, setShowVisionKey] = useState(false);
   const [envConfig, setEnvConfig] = useState<{ configured: boolean; baseUrl: string; defaultImageModel: string; defaultTextModel: string; defaultVisionModel?: string } | null>(null);
   const [envLoading, setEnvLoading] = useState(false);
-  const [profile, setProfile] = useState<StoredUser>(() => loadCurrentUserProfile() ?? { nickname: "韵豆用户", avatarUrl: "", createdAt: Date.now() });
+  const [profile, setProfile] = useState<StoredUser>(() => loadCurrentUserProfile() ?? { nickname: "豆韵用户", avatarUrl: "", createdAt: Date.now() });
   const [nicknameEditing, setNicknameEditing] = useState(false);
   const [nicknameDraft, setNicknameDraft] = useState(profile.nickname);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -177,7 +177,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
   }, [apiConfig, onApiConfigSaved]);
 
   const handleExport = useCallback((record: ProjectRecord, format: "png" | "preview" | "csv" | "pdf") => {
-    const title = record.title || "韵豆作品";
+    const title = record.title || "豆韵作品";
     switch (format) {
       case "png": if (record.patternUrl) { const a = document.createElement("a"); a.href = record.patternUrl; a.download = `${title}-拼豆图纸.png`; a.click(); } break;
       case "preview": if (record.mockupUrl) { const a = document.createElement("a"); a.href = record.mockupUrl; a.download = `${title}-场景预览.png`; a.click(); } break;
@@ -190,7 +190,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
     try {
       await publishCommunityPost({
         record,
-        author: profile.nickname || "韵豆用户",
+        author: profile.nickname || "豆韵用户",
         avatar: profile.avatarUrl,
       });
       setPublishMessageType("success");
@@ -221,7 +221,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
   const confirmLogout = useCallback(() => {
     logoutUser();
     saveApiConfig({ textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "", visionModelApiKey: "", visionModelName: "", autoSaveIntervalSeconds: DEFAULT_AUTO_SAVE_INTERVAL_SECONDS, useDefaultModel: true });
-    setProfile({ nickname: "韵豆用户", avatarUrl: "", createdAt: Date.now() });
+    setProfile({ nickname: "豆韵用户", avatarUrl: "", createdAt: Date.now() });
     setApiConfig({ textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "", visionModelApiKey: "", visionModelName: "", autoSaveIntervalSeconds: DEFAULT_AUTO_SAVE_INTERVAL_SECONDS, useDefaultModel: true });
     void refreshHistory();
     setSelectedIds(new Set());

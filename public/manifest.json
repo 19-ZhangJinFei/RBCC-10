@@ -1,7 +1,7 @@
 {
-  "name": "韵豆",
-  "short_name": "韵豆",
-  "description": "韵豆 — AI 驱动的中华文创拼豆设计系统，主题元素提取、拼豆底稿生成、文创产品场景预览",
+  "name": "豆韵",
+  "short_name": "豆韵",
+  "description": "豆韵 — AI 驱动的中华文创拼豆设计系统，主题元素提取、拼豆底稿生成、文创产品场景预览",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#E8F4FD",

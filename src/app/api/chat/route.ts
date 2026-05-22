@@ -112,7 +112,7 @@ async function handleTextChat(messages: unknown, config: RequestConfig | undefin
       messages: [
         {
           role: "system",
-          content: "你是韵豆AI助手。优先直接回答用户问题，保持简洁、准确、中文输出；只有当用户明确要求生成图片时才建议切换到生图模式。",
+          content: "你是豆韵AI助手。优先直接回答用户问题，保持简洁、准确、中文输出；只有当用户明确要求生成图片时才建议切换到生图模式。",
         },
         ...normalizedMessages,
       ],
@@ -122,7 +122,7 @@ async function handleTextChat(messages: unknown, config: RequestConfig | undefin
   if (!response.ok) {
     const detail = await response.text();
     return NextResponse.json(
-      { error: formatUpstreamError(detail, "韵豆AI 对话请求失败"), detail },
+      { error: formatUpstreamError(detail, "豆韵AI 对话请求失败"), detail },
       { status: response.status },
     );
   }
@@ -130,7 +130,7 @@ async function handleTextChat(messages: unknown, config: RequestConfig | undefin
   const result = await response.json();
   const content = extractAssistantText(result?.choices?.[0]?.message?.content);
   if (!content) {
-    return NextResponse.json({ error: "韵豆AI 对话接口未返回文本内容。" }, { status: 502 });
+    return NextResponse.json({ error: "豆韵AI 对话接口未返回文本内容。" }, { status: 502 });
   }
 
   return NextResponse.json({ content });
@@ -176,7 +176,7 @@ async function handleImageGeneration(messages: unknown, config: RequestConfig | 
   if (!response.ok) {
     const detail = await response.text();
     return NextResponse.json(
-      { error: formatUpstreamError(detail, "韵豆AI 生图请求失败"), detail },
+      { error: formatUpstreamError(detail, "豆韵AI 生图请求失败"), detail },
       { status: response.status },
     );
   }
@@ -185,7 +185,7 @@ async function handleImageGeneration(messages: unknown, config: RequestConfig | 
   const base64 = result?.data?.[0]?.b64_json;
   const url = result?.data?.[0]?.url;
   if (!base64 && !url) {
-    return NextResponse.json({ error: "韵豆AI 生图接口未返回图片数据。" }, { status: 502 });
+    return NextResponse.json({ error: "豆韵AI 生图接口未返回图片数据。" }, { status: 502 });
   }
 
   return NextResponse.json({

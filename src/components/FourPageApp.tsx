@@ -637,7 +637,7 @@ export default function FourPageApp() {
               <p className="text-xs font-semibold text-cyan-700 dark:text-cyan-300">
                 AI 驱动的中华文创拼豆设计系统
               </p>
-              <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">韵豆</h1>
+              <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">豆韵</h1>
             </div>
             {/* Progress dots */}
             <div className="flex items-center gap-2">

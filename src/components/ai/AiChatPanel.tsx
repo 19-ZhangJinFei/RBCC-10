@@ -228,7 +228,7 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
     >
       <div className="flex items-center justify-between rounded-t-lg bg-[#2b2118] px-5 py-3 text-white">
         <div className="flex items-center gap-2">
-          <span className="font-semibold">韵豆AI</span>
+          <span className="font-semibold">豆韵AI</span>
         </div>
         {!embedded && (
           <button
@@ -246,7 +246,7 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
 
       {showApiWarning && (
         <div className="mx-4 mt-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          未配置 API，暂时无法使用韵豆AI。
+          未配置 API，暂时无法使用豆韵AI。
           <button
             type="button"
             onClick={() => setShowApiWarning(false)}
@@ -277,7 +277,7 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
               {msg.imageUrl && (
                 <img
                   src={msg.imageUrl}
-                  alt="韵豆AI生成图像"
+                  alt="豆韵AI生成图像"
                   className="mt-3 max-h-[520px] w-full rounded-lg border border-stone-200 bg-white object-contain"
                 />
               )}
