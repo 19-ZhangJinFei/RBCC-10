@@ -1,6 +1,7 @@
 import type { ApiConfig, ProjectRecord } from "@/types/projectTypes";
 
 const API_CONFIG_KEY = "douyun_api_config";
+const USER_SKILL_LEVEL_KEY = "douyun_user_skill_level";
 const PROJECT_HISTORY_KEY = "douyun_project_history";
 const ACTIVE_PROJECT_KEY = "douyun_active_project";
 const USERS_KEY = "douyun_users";
@@ -24,6 +25,34 @@ export interface StoredUser {
   nickname: string;
   avatarUrl: string;
   createdAt: number;
+  skillLevel?: UserSkillLevel;
+}
+
+export type UserSkillLevel = "beginner" | "skilled" | "expert";
+export const DEFAULT_USER_SKILL_LEVEL: UserSkillLevel = "beginner";
+
+function normalizeUserSkillLevel(value: unknown): UserSkillLevel {
+  return value === "skilled" || value === "expert" || value === "beginner"
+    ? value
+    : DEFAULT_USER_SKILL_LEVEL;
+}
+
+export function loadUserSkillLevel(): UserSkillLevel {
+  if (!isAvailable()) return DEFAULT_USER_SKILL_LEVEL;
+  try {
+    return normalizeUserSkillLevel(localStorage.getItem(USER_SKILL_LEVEL_KEY));
+  } catch {
+    return DEFAULT_USER_SKILL_LEVEL;
+  }
+}
+
+export function saveUserSkillLevel(skillLevel: UserSkillLevel): void {
+  if (!isAvailable()) return;
+  try {
+    localStorage.setItem(USER_SKILL_LEVEL_KEY, skillLevel);
+  } catch {
+    // ignore small preference write failures
+  }
 }
 
 function loadUsers(): Record<string, StoredUser> {
@@ -100,17 +129,19 @@ export function logoutUser(): void {
 export function loadCurrentUserProfile(): StoredUser | null {
   const username = loadCurrentUser();
   if (!username) return null;
-  return getUserProfile(username);
+  const profile = getUserProfile(username);
+  return profile ? { ...profile, skillLevel: normalizeUserSkillLevel(profile.skillLevel) } : null;
 }
 
-/** 更新当前登录用户的昵称和头像 */
-export function updateCurrentUserProfile(profile: { nickname: string; avatarUrl: string }): void {
+/** 更新当前登录用户资料 */
+export function updateCurrentUserProfile(profile: Partial<Pick<StoredUser, "nickname" | "avatarUrl" | "skillLevel">>): void {
   const username = loadCurrentUser();
   if (!username) return;
   const users = loadUsers();
   if (!users[username]) return;
   users[username] = { ...users[username], ...profile, createdAt: users[username].createdAt };
   saveUsers(users);
+  if (profile.skillLevel) saveUserSkillLevel(profile.skillLevel);
 }
 
 /* ──────── 随机昵称 ──────── */

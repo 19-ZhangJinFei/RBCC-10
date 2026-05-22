@@ -2764,13 +2764,13 @@ export default function CreativeBeadStudio() {
                 if (p) setCurrentUser(p);
                 setView("profile");
               }}
-              className="flex shrink-0 items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-stone-600 transition hover:bg-stone-100 hover:text-stone-950"
+              className="flex shrink-0 items-center gap-3 rounded-md px-4 py-2 text-base font-semibold text-stone-700 transition hover:bg-stone-100 hover:text-stone-950"
             >
-              <span className="grid h-7 w-7 overflow-hidden rounded-full bg-stone-300 text-xs font-semibold text-white">
+              <span className="grid h-9 w-9 overflow-hidden rounded-full bg-stone-300 text-sm font-semibold text-white">
                 {currentUser.avatarUrl && currentUser.avatarUrl.startsWith("data:") ? (
                   <img src={currentUser.avatarUrl} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  <span className="grid h-full w-full place-items-center text-base">
+                  <span className="grid h-full w-full place-items-center text-lg">
                     {currentUser.avatarUrl?.startsWith("emoji:")
                       ? currentUser.avatarUrl.slice(6)
                       : currentUser.nickname.charAt(0)}

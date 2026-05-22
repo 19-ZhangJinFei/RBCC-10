@@ -11,11 +11,15 @@ import {
   deleteProjectRecords,
   loadCurrentUserProfile,
   loadCurrentUser,
+  loadUserSkillLevel,
+  saveUserSkillLevel,
   updateCurrentUserProfile,
   logoutUser,
   DEFAULT_AUTO_SAVE_INTERVAL_SECONDS,
+  DEFAULT_USER_SKILL_LEVEL,
   normalizeAutoSaveIntervalSeconds,
   type StoredUser,
+  type UserSkillLevel,
 } from "@/utils/profileStorage";
 import AvatarCropper from "@/components/AvatarCropper";
 import LoginModal from "@/components/LoginModal";
@@ -69,12 +73,14 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
   const text = {
     backHome: language === "en" ? "Back Home" : "返回首页",
     profileTitle: language === "en" ? "Profile" : "个人主页",
-    languageTitle: language === "en" ? "Language" : "语言",
-    languageDesc: language === "en"
-      ? "Select the system language. Navigation, profile settings, and future AI responses follow this choice."
-      : "选择系统语言。顶部导航、个人配置和后续 AI 输出都会随之切换。",
+    languageTitle: "语言 / Language",
+    languageDesc: "选择系统语言 / Select the system language. Navigation, profile settings, and future AI responses follow this choice.",
     personalInfo: language === "en" ? "Personal Info" : "个人资料",
     personalInfoDesc: language === "en" ? "Set your avatar and nickname. This information is stored only in this browser." : "设置头像和昵称，信息仅存储在本地浏览器中。",
+    skillLevel: language === "en" ? "Skill Level" : "制作熟练度",
+    skillLevelDesc: language === "en"
+      ? "This affects how complex AI-generated images are."
+      : "用于控制 AI 生图的图案难度、细节密度和配色层次。",
     change: language === "en" ? "Change" : "更换",
     remove: language === "en" ? "Remove" : "移除",
     save: language === "en" ? "Save" : "保存",
@@ -93,6 +99,52 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
     account: language === "en" ? "Account Settings" : "账号设置",
     logout: language === "en" ? "Log out" : "退出登录",
     loginRegister: language === "en" ? "Log in / Register" : "登录 / 注册",
+    deleteConfirm: language === "en" ? "Delete the selected project records? This cannot be undone." : "确定删除选中的作品记录？此操作不可撤销。",
+    defaultWork: language === "en" ? "Work" : "作品",
+    defaultDouyunWork: language === "en" ? "DouYun Work" : "豆韵作品",
+    patternPng: language === "en" ? "Pattern PNG" : "拼豆图纸",
+    previewPng: language === "en" ? "Preview PNG" : "场景预览",
+    csvAlert: language === "en" ? "Open the work and download the usage CSV from the bead pattern step." : "请进入作品后，在「拼豆图纸」步骤下载用量 CSV。",
+    pdfAlert: language === "en" ? "Open the work and use print/PDF export from the scene preview step." : "请进入作品后，在「场景预览」步骤使用打印/PDF 导出。",
+    publishSuccess: language === "en" ? "Work published to the cloud community." : "作品已发布到云端社区",
+    publishFailed: language === "en" ? "Failed to publish work." : "作品发布失败",
+    avatarAlt: language === "en" ? "Avatar" : "头像",
+    defaultConfigured: language === "en" ? "System default configuration is active" : "已使用服务端默认配置",
+    baseUrl: language === "en" ? "Base URL" : "接口地址",
+    defaultTextModel: language === "en" ? "Default text model" : "默认文本模型",
+    defaultImageModel: language === "en" ? "Default image model" : "默认图片模型",
+    visionModel: language === "en" ? "Vision model" : "主体识别模型",
+    notConfiguredSeparately: language === "en" ? "Not separately configured" : "未单独配置",
+    envMissingDetail: language === "en" ? "Server environment keys are missing. Fill in the API keys below." : "服务端未配置环境变量密钥（AI_API_KEY / ARK_API_KEY / OPENAI_API_KEY），请手动填写下方的 API Key。",
+    textModel: language === "en" ? "Text Model" : "文本模型",
+    imageModel: language === "en" ? "Image Model" : "生图模型",
+    visionModelLabel: language === "en" ? "Vision Model" : "图像理解模型",
+    selectPlaceholder: language === "en" ? "Select" : "请选择",
+    noApiKey: language === "en" ? "Need an API key? Visit" : "还没有 API Key？前往",
+    officialSite: language === "en" ? "official site" : "官方网站购买",
+    autoSaveInterval: language === "en" ? "Auto-save Interval" : "自动保存间隔",
+    seconds: language === "en" ? "seconds" : "秒",
+    autoSaveHint: language === "en" ? "Projects are auto-saved at this interval while creating. Default is 30 seconds." : "创作进行中会按这个间隔自动保存到历史作品，默认 30 秒。",
+    saveConfig: language === "en" ? "Save Configuration" : "保存配置",
+    savedLocal: language === "en" ? "Saved locally" : "已保存到本地",
+    multiSelect: language === "en" ? "Multi-select" : "多选",
+    exitMultiSelect: language === "en" ? "Exit multi-select" : "退出多选",
+    noRecords: language === "en" ? "No project records yet" : "暂无作品记录",
+    selectAll: language === "en" ? "Select all" : "全选",
+    selectedCount: language === "en" ? "Selected" : "已选",
+    batchExport: language === "en" ? "Batch export patterns" : "批量导出图纸",
+    batchDelete: language === "en" ? "Batch delete" : "批量删除",
+    logoutDesc: language === "en" ? "After logging out, this account's history will be hidden. Unsaved local works are not deleted." : "登出后将不再显示与该账号有关的信息，本地未保存的作品不会被删除。",
+    loginDesc: language === "en" ? "Log in to keep project progress and personalized settings on this device." : "登录后可同步作品进度和个性化设置到本设备。",
+    logoutTitle: language === "en" ? "Confirm Log Out" : "确认退出登录",
+    logoutConfirmDesc: language === "en" ? "After logging out, this account's project history will be hidden and current progress will be cleared. Log in again to restore the saved history for this account." : "退出后将无法看到当前账号的历史作品，并会清空当前创作进度。重新登录该账号后，可以恢复该账号保存的历史作品。",
+    confirmLogout: language === "en" ? "Confirm Log Out" : "确认退出",
+    keepLoggedIn: language === "en" ? "Stay Logged In" : "放弃退出",
+    noPreview: language === "en" ? "No preview" : "无预览",
+    restoreProgress: language === "en" ? "Restore Progress" : "恢复进度",
+    publishCommunity: language === "en" ? "Publish to Community" : "发布到社区",
+    deleteRecord: language === "en" ? "Delete Record" : "删除记录",
+    deleteOneConfirm: language === "en" ? "Delete this record?" : "确定删除？",
   };
   const [apiConfig, setApiConfig] = useState(() =>
     loadApiConfig() ?? { textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "", visionModelApiKey: "", visionModelName: "", autoSaveIntervalSeconds: DEFAULT_AUTO_SAVE_INTERVAL_SECONDS, useDefaultModel: true }
@@ -103,7 +155,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
   const [showVisionKey, setShowVisionKey] = useState(false);
   const [envConfig, setEnvConfig] = useState<EnvConfig | null>(() => cachedEnvConfig);
   const [envLoading, setEnvLoading] = useState(false);
-  const [profile, setProfile] = useState<StoredUser>(() => loadCurrentUserProfile() ?? { nickname: "豆韵用户", avatarUrl: "", createdAt: Date.now() });
+  const [profile, setProfile] = useState<StoredUser>(() => loadCurrentUserProfile() ?? { nickname: "豆韵用户", avatarUrl: "", createdAt: Date.now(), skillLevel: loadUserSkillLevel() });
   const [nicknameEditing, setNicknameEditing] = useState(false);
   const [nicknameDraft, setNicknameDraft] = useState(profile.nickname);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -144,12 +196,12 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
   const batchDelete = useCallback(() => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    if (!confirm(`确定删除选中的 ${ids.length} 条作品记录？此操作不可撤销。`)) return;
+    if (!confirm(`${text.deleteConfirm} (${ids.length})`)) return;
     void deleteProjectRecords(ids).then(() => {
       void refreshHistory();
       setSelectedIds(new Set());
     });
-  }, [refreshHistory, selectedIds]);
+  }, [refreshHistory, selectedIds, text.deleteConfirm]);
 
   const batchExport = useCallback(() => {
     const records = history.filter(r => selectedIds.has(r.id));
@@ -160,16 +212,28 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
         const a = document.createElement("a");
         a.href = url;
         const prefix = String(i + 1).padStart(2, "0");
-        a.download = `${prefix}-${record.title || record.theme || "作品"}.png`;
+        a.download = `${prefix}-${record.title || record.theme || text.defaultWork}.png`;
         a.click();
       }
     });
-  }, [history, selectedIds]);
+  }, [history, selectedIds, text.defaultWork]);
 
   const saveProfile = useCallback((p: StoredUser) => {
     setProfile(p);
-    updateCurrentUserProfile({ nickname: p.nickname, avatarUrl: p.avatarUrl });
+    const skillLevel = p.skillLevel ?? DEFAULT_USER_SKILL_LEVEL;
+    saveUserSkillLevel(skillLevel);
+    updateCurrentUserProfile({ nickname: p.nickname, avatarUrl: p.avatarUrl, skillLevel });
   }, []);
+
+  const skillOptions: Array<{ id: UserSkillLevel; zh: string; en: string; zhDesc: string; enDesc: string }> = [
+    { id: "beginner", zh: "新手", en: "Beginner", zhDesc: "轮廓清楚，色块更大，细节适中", enDesc: "Clear silhouettes, larger color blocks, moderate detail" },
+    { id: "skilled", zh: "熟练", en: "Skilled", zhDesc: "增加纹样层次和辅助色，难度中等", enDesc: "More pattern layers and accent colors, medium difficulty" },
+    { id: "expert", zh: "精通", en: "Expert", zhDesc: "更丰富细节和复杂配色，适合挑战", enDesc: "Richer details and complex color work for a challenge" },
+  ];
+
+  const handleSkillLevelChange = useCallback((skillLevel: UserSkillLevel) => {
+    saveProfile({ ...profile, skillLevel });
+  }, [profile, saveProfile]);
 
   const handleAvatarChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -261,29 +325,29 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
   }, [apiConfig, onApiConfigSaved]);
 
   const handleExport = useCallback((record: ProjectRecord, format: "png" | "preview" | "csv" | "pdf") => {
-    const title = record.title || "豆韵作品";
+    const title = record.title || text.defaultDouyunWork;
     switch (format) {
-      case "png": if (record.patternUrl) { const a = document.createElement("a"); a.href = record.patternUrl; a.download = `${title}-拼豆图纸.png`; a.click(); } break;
-      case "preview": if (record.mockupUrl) { const a = document.createElement("a"); a.href = record.mockupUrl; a.download = `${title}-场景预览.png`; a.click(); } break;
-      case "csv": alert("请进入作品后，在「拼豆图纸」步骤下载用量 CSV。"); break;
-      case "pdf": alert("请进入作品后，在「场景预览」步骤使用打印/PDF 导出。"); break;
+      case "png": if (record.patternUrl) { const a = document.createElement("a"); a.href = record.patternUrl; a.download = `${title}-${text.patternPng}.png`; a.click(); } break;
+      case "preview": if (record.mockupUrl) { const a = document.createElement("a"); a.href = record.mockupUrl; a.download = `${title}-${text.previewPng}.png`; a.click(); } break;
+      case "csv": alert(text.csvAlert); break;
+      case "pdf": alert(text.pdfAlert); break;
     }
-  }, []);
+  }, [text.csvAlert, text.defaultDouyunWork, text.patternPng, text.pdfAlert, text.previewPng]);
 
   const handlePublish = useCallback(async (record: ProjectRecord) => {
     try {
       await publishCommunityPost({
         record,
-        author: profile.nickname || "豆韵用户",
+        author: profile.nickname || text.defaultDouyunWork,
         avatar: profile.avatarUrl,
       });
       setPublishMessageType("success");
-      setPublishMessage("作品已发布到云端社区");
+      setPublishMessage(text.publishSuccess);
     } catch (err) {
       setPublishMessageType("error");
-      setPublishMessage(err instanceof Error ? err.message : "作品发布失败");
+      setPublishMessage(err instanceof Error ? err.message : text.publishFailed);
     }
-  }, [profile.avatarUrl, profile.nickname]);
+  }, [profile.avatarUrl, profile.nickname, text.defaultDouyunWork, text.publishFailed, text.publishSuccess]);
 
   useEffect(() => {
     if (!publishMessage) return;
@@ -297,7 +361,9 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
   const currentVisionOption = VISION_MODEL_OPTIONS.find(m => m.name === apiConfig.visionModelName);
 
   const handleLoggedIn = useCallback((user: StoredUser) => {
-    setProfile(user);
+    const nextUser = { ...user, skillLevel: user.skillLevel ?? loadUserSkillLevel() };
+    setProfile(nextUser);
+    saveUserSkillLevel(nextUser.skillLevel ?? DEFAULT_USER_SKILL_LEVEL);
     void refreshHistory();
     setShowLoginModal(false);
   }, [refreshHistory]);
@@ -305,7 +371,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
   const confirmLogout = useCallback(() => {
     logoutUser();
     saveApiConfig({ textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "", visionModelApiKey: "", visionModelName: "", autoSaveIntervalSeconds: DEFAULT_AUTO_SAVE_INTERVAL_SECONDS, useDefaultModel: true });
-    setProfile({ nickname: "豆韵用户", avatarUrl: "", createdAt: Date.now() });
+    setProfile({ nickname: "豆韵用户", avatarUrl: "", createdAt: Date.now(), skillLevel: loadUserSkillLevel() });
     setApiConfig({ textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "", visionModelApiKey: "", visionModelName: "", autoSaveIntervalSeconds: DEFAULT_AUTO_SAVE_INTERVAL_SECONDS, useDefaultModel: true });
     void refreshHistory();
     setSelectedIds(new Set());
@@ -363,7 +429,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
               <div className="h-20 w-20 overflow-hidden rounded-full border-2 border-stone-200 bg-stone-100">
                 {profile.avatarUrl ? (
                   profile.avatarUrl.startsWith("data:") ? (
-                    <img src={profile.avatarUrl} alt="头像" className="h-full w-full object-cover" />
+                    <img src={profile.avatarUrl} alt={text.avatarAlt} className="h-full w-full object-cover" />
                   ) : profile.avatarUrl.startsWith("emoji:") ? (
                     <span className="grid h-full w-full place-items-center text-3xl">{profile.avatarUrl.slice(6)}</span>
                   ) : (
@@ -408,6 +474,37 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
               <p className="mt-1 text-xs text-stone-400">{text.avatarHint}</p>
             </div>
           </div>
+
+          <div className="mt-6 border-t border-stone-100 pt-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-stone-800">{text.skillLevel}</h3>
+                <p className="mt-1 text-xs leading-5 text-stone-500">{text.skillLevelDesc}</p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {skillOptions.map((option) => {
+                  const selected = (profile.skillLevel ?? DEFAULT_USER_SKILL_LEVEL) === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => handleSkillLevelChange(option.id)}
+                      className={`rounded-md border px-4 py-3 text-left transition ${
+                        selected
+                          ? "border-[#8f1d21] bg-[#8f1d21] text-white shadow-sm"
+                          : "border-stone-200 bg-stone-50 text-stone-700 hover:border-[#8f1d21]/40 hover:bg-white"
+                      }`}
+                    >
+                      <span className="block text-sm font-semibold">{language === "en" ? option.en : option.zh}</span>
+                      <span className={`mt-1 block text-xs leading-5 ${selected ? "text-white/80" : "text-stone-500"}`}>
+                        {language === "en" ? option.enDesc : option.zhDesc}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </section>
 
         {/* API 配置 */}
@@ -441,24 +538,24 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
 
           {apiConfig.useDefaultModel && envConfig?.configured ? (
             <div className="mt-4 rounded-md border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-800">
-              <p className="font-medium">✓ 已使用服务端默认配置</p>
+              <p className="font-medium">✓ {text.defaultConfigured}</p>
               <ul className="mt-1 space-y-1 text-xs text-emerald-700">
-                {envConfig.baseUrl && <li>接口地址：<code className="rounded bg-emerald-100 px-1">{envConfig.baseUrl}</code></li>}
-                {envConfig.defaultTextModel && <li>默认文本模型：<code className="rounded bg-emerald-100 px-1">{envConfig.defaultTextModel}</code></li>}
-                {envConfig.defaultImageModel && <li>默认图片模型：<code className="rounded bg-emerald-100 px-1">{envConfig.defaultImageModel}</code></li>}
-                <li>主体识别模型：<code className="rounded bg-emerald-100 px-1">{envConfig.defaultVisionModel || envConfig.defaultTextModel || "未单独配置"}</code></li>
+                {envConfig.baseUrl && <li>{text.baseUrl}: <code className="rounded bg-emerald-100 px-1">{envConfig.baseUrl}</code></li>}
+                {envConfig.defaultTextModel && <li>{text.defaultTextModel}: <code className="rounded bg-emerald-100 px-1">{envConfig.defaultTextModel}</code></li>}
+                {envConfig.defaultImageModel && <li>{text.defaultImageModel}: <code className="rounded bg-emerald-100 px-1">{envConfig.defaultImageModel}</code></li>}
+                <li>{text.visionModel}: <code className="rounded bg-emerald-100 px-1">{envConfig.defaultVisionModel || envConfig.defaultTextModel || text.notConfiguredSeparately}</code></li>
               </ul>
             </div>
           ) : apiConfig.useDefaultModel && !envLoading ? (
             <div className="mt-4 rounded-md border border-amber-100 bg-amber-50 p-3 text-sm text-amber-800">
-              ⚠️ 服务端未配置环境变量密钥（AI_API_KEY / ARK_API_KEY / OPENAI_API_KEY），请手动填写下方的 API Key。
+              ⚠️ {text.envMissingDetail}
             </div>
           ) : null}
 
           <div className="mt-6 grid gap-6 md:grid-cols-3">
             {/* 文本模型 */}
             <div>
-              <label className="text-sm font-medium">文本模型</label>
+              <label className="text-sm font-medium">{text.textModel}</label>
               <div className="relative mt-1">
                 <select
                   value={apiConfig.textModelName}
@@ -466,7 +563,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
                   className={`w-full appearance-none rounded-md border py-2 pl-3 pr-8 text-sm ${apiConfig.useDefaultModel ? 'border-emerald-200 bg-emerald-50/50 text-stone-500' : 'border-stone-300'}`}
                   disabled={apiConfig.useDefaultModel}
                 >
-                  <option value="" disabled>请选择</option>
+                  <option value="" disabled>{text.selectPlaceholder}</option>
                   {TEXT_MODEL_OPTIONS.map(m => <option key={m.name} value={m.name}>{m.icon} {m.name}</option>)}
                 </select>
               </div>
@@ -478,8 +575,8 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
                   </div>
                   {!apiConfig.textModelApiKey && currentTextOption?.purchaseUrl && (
                     <p className="mt-1.5 text-xs text-stone-400">
-                      还没有 API Key？前往
-                      <a href={currentTextOption.purchaseUrl} target="_blank" rel="noopener noreferrer" className="mx-1 font-medium text-[#8f1d21] underline hover:text-[#a52327]">官方网站购买</a>
+                      {text.noApiKey}
+                      <a href={currentTextOption.purchaseUrl} target="_blank" rel="noopener noreferrer" className="mx-1 font-medium text-[#8f1d21] underline hover:text-[#a52327]">{text.officialSite}</a>
                     </p>
                   )}
                 </>
@@ -487,7 +584,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
             </div>
             {/* 生图模型 */}
             <div>
-              <label className="text-sm font-medium">生图模型</label>
+              <label className="text-sm font-medium">{text.imageModel}</label>
               <div className="relative mt-1">
                 <select
                   value={apiConfig.imageModelName}
@@ -495,7 +592,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
                   className={`w-full appearance-none rounded-md border py-2 pl-3 pr-8 text-sm ${apiConfig.useDefaultModel ? 'border-emerald-200 bg-emerald-50/50 text-stone-500' : 'border-stone-300'}`}
                   disabled={apiConfig.useDefaultModel}
                 >
-                  <option value="" disabled>请选择</option>
+                  <option value="" disabled>{text.selectPlaceholder}</option>
                   {IMAGE_MODEL_OPTIONS.map(m => <option key={m.name} value={m.name}>{m.icon} {m.name}</option>)}
                 </select>
               </div>
@@ -507,15 +604,15 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
                   </div>
                   {!apiConfig.imageModelApiKey && currentImageOption?.purchaseUrl && (
                     <p className="mt-1.5 text-xs text-stone-400">
-                      还没有 API Key？前往
-                      <a href={currentImageOption.purchaseUrl} target="_blank" rel="noopener noreferrer" className="mx-1 font-medium text-[#8f1d21] underline hover:text-[#a52327]">官方网站购买</a>
+                      {text.noApiKey}
+                      <a href={currentImageOption.purchaseUrl} target="_blank" rel="noopener noreferrer" className="mx-1 font-medium text-[#8f1d21] underline hover:text-[#a52327]">{text.officialSite}</a>
                     </p>
                   )}
                 </>
               )}
             </div>
             <div>
-              <label className="text-sm font-medium">图像理解模型</label>
+              <label className="text-sm font-medium">{text.visionModelLabel}</label>
               <div className="relative mt-1">
                 <select
                   value={apiConfig.visionModelName ?? ""}
@@ -523,7 +620,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
                   className={`w-full appearance-none rounded-md border py-2 pl-3 pr-8 text-sm ${apiConfig.useDefaultModel ? 'border-emerald-200 bg-emerald-50/50 text-stone-500' : 'border-stone-300'}`}
                   disabled={apiConfig.useDefaultModel}
                 >
-                  <option value="" disabled>请选择</option>
+                  <option value="" disabled>{text.selectPlaceholder}</option>
                   {VISION_MODEL_OPTIONS.map(m => <option key={m.name} value={m.name}>{m.icon} {m.name}</option>)}
                 </select>
               </div>
@@ -541,8 +638,8 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
                   </div>
                   {!apiConfig.visionModelApiKey && currentVisionOption?.purchaseUrl && (
                     <p className="mt-1.5 text-xs text-stone-400">
-                      还没有 API Key？前往
-                      <a href={currentVisionOption.purchaseUrl} target="_blank" rel="noopener noreferrer" className="mx-1 font-medium text-[#8f1d21] underline hover:text-[#a52327]">官方网站购买</a>
+                      {text.noApiKey}
+                      <a href={currentVisionOption.purchaseUrl} target="_blank" rel="noopener noreferrer" className="mx-1 font-medium text-[#8f1d21] underline hover:text-[#a52327]">{text.officialSite}</a>
                     </p>
                   )}
                 </>
@@ -551,7 +648,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
           </div>
           <div className="mt-6 rounded-md border border-stone-200 bg-stone-50 p-4">
             <label className="text-sm font-medium text-stone-800">
-              自动保存间隔
+              {text.autoSaveInterval}
               <div className="mt-2 flex max-w-xs items-center gap-3">
                 <input
                   type="number"
@@ -562,14 +659,14 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
                   onChange={(e) => setApiConfig(p => ({ ...p, autoSaveIntervalSeconds: Number(e.target.value) }))}
                   className="w-28 rounded-md border border-stone-300 px-3 py-2 text-sm"
                 />
-                <span className="text-sm text-stone-500">秒</span>
+                <span className="text-sm text-stone-500">{text.seconds}</span>
               </div>
-              <p className="mt-2 text-xs leading-6 text-stone-500">创作进行中会按这个间隔自动保存到历史作品，默认 30 秒。</p>
+              <p className="mt-2 text-xs leading-6 text-stone-500">{text.autoSaveHint}</p>
             </label>
           </div>
           <div className="mt-4 flex items-center gap-3">
-            <button type="button" onClick={handleSaveApi} className="rounded-md bg-[#8f1d21] px-4 py-2 text-sm font-semibold text-white">保存配置</button>
-            {saved && <span className="text-sm text-emerald-600">✓ 已保存到本地</span>}
+            <button type="button" onClick={handleSaveApi} className="rounded-md bg-[#8f1d21] px-4 py-2 text-sm font-semibold text-white">{text.saveConfig}</button>
+            {saved && <span className="text-sm text-emerald-600">✓ {text.savedLocal}</span>}
           </div>
         </section>
 
@@ -590,7 +687,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
                     : "border border-stone-300 bg-white text-stone-600 hover:bg-stone-100"
                 }`}
               >
-                {batchMode ? "退出多选" : "多选"}
+                {batchMode ? text.exitMultiSelect : text.multiSelect}
               </button>
             )}
           </div>
@@ -603,19 +700,19 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
           )}
 
           {history.length === 0 ? (
-            <div className="mt-6 grid place-items-center rounded-lg border border-dashed border-stone-300 py-16 text-sm text-stone-400">暂无作品记录</div>
+            <div className="mt-6 grid place-items-center rounded-lg border border-dashed border-stone-300 py-16 text-sm text-stone-400">{text.noRecords}</div>
           ) : (
             <>
               {batchMode && (
                 <div className="mt-4 flex flex-wrap items-center gap-3 rounded-md bg-stone-50 px-4 py-3">
                   <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-stone-700">
                     <input type="checkbox" checked={selectedIds.size === history.length} onChange={toggleSelectAll} className="h-4 w-4 rounded border-stone-300" />
-                    全选
+                    {text.selectAll}
                   </label>
-                  <span className="text-xs text-stone-400">已选 {selectedIds.size} / {history.length}</span>
+                  <span className="text-xs text-stone-400">{text.selectedCount} {selectedIds.size} / {history.length}</span>
                   <div className="ml-auto flex gap-2">
-                    <button type="button" onClick={batchExport} disabled={selectedIds.size === 0} className="rounded-md bg-[#8f1d21] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50">📦 批量导出图纸</button>
-                    <button type="button" onClick={batchDelete} disabled={selectedIds.size === 0} className="rounded-md border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-700 disabled:opacity-50">🗑️ 批量删除</button>
+                    <button type="button" onClick={batchExport} disabled={selectedIds.size === 0} className="rounded-md bg-[#8f1d21] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50">📦 {text.batchExport}</button>
+                    <button type="button" onClick={batchDelete} disabled={selectedIds.size === 0} className="rounded-md border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-700 disabled:opacity-50">🗑️ {text.batchDelete}</button>
                   </div>
                 </div>
               )}
@@ -631,6 +728,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
                     onExport={(f) => handleExport(record, f)}
                     onPublish={() => handlePublish(record)}
                     onDelete={() => { void deleteProjectRecord(record.id).then(refreshHistory); }}
+                    text={text}
                   />
                 ))}
               </div>
@@ -643,7 +741,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
           <h2 className="text-xl font-semibold text-stone-800">{text.account}</h2>
           {isLoggedIn ? (
             <>
-              <p className="mt-1 text-sm text-stone-500">登出后将不再显示与该账号有关的信息，本地未保存的作品不会被删除。</p>
+              <p className="mt-1 text-sm text-stone-500">{text.logoutDesc}</p>
               <button
                 type="button"
                 onClick={() => setShowLogoutConfirm(true)}
@@ -654,7 +752,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
             </>
           ) : (
             <>
-              <p className="mt-1 text-sm text-stone-500">登录后可同步作品进度和个性化设置到本设备。</p>
+              <p className="mt-1 text-sm text-stone-500">{text.loginDesc}</p>
               <div className="mt-4 flex gap-3">
                 <button
                   type="button"
@@ -672,9 +770,9 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/45 px-4">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-2xl">
-            <h2 className="text-xl font-semibold text-stone-950">确认退出登录</h2>
+            <h2 className="text-xl font-semibold text-stone-950">{text.logoutTitle}</h2>
             <p className="mt-3 text-sm leading-6 text-stone-600">
-              退出后将无法看到当前账号的历史作品，并会清空当前创作进度。重新登录该账号后，可以恢复该账号保存的历史作品。
+              {text.logoutConfirmDesc}
             </p>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <button
@@ -682,14 +780,14 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
                 onClick={confirmLogout}
                 className="rounded-md bg-[#8f1d21] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#a82428]"
               >
-                确认退出
+                {text.confirmLogout}
               </button>
               <button
                 type="button"
                 onClick={() => setShowLogoutConfirm(false)}
                 className="rounded-md border border-stone-300 bg-white px-4 py-3 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
               >
-                鏀惧純閫€鍑?
+                {text.keepLoggedIn}
               </button>
             </div>
           </div>
@@ -714,7 +812,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
   );
 }
 
-function ProjectCard({ record, selected, onToggleSelect, onRestore, onExport, onPublish, onDelete }: {
+function ProjectCard({ record, selected, onToggleSelect, onRestore, onExport, onPublish, onDelete, text }: {
   record: ProjectRecord;
   selected?: boolean;
   onToggleSelect?: () => void;
@@ -722,6 +820,7 @@ function ProjectCard({ record, selected, onToggleSelect, onRestore, onExport, on
   onExport: (f: "png" | "preview" | "csv" | "pdf") => void;
   onPublish: () => void;
   onDelete: () => void;
+  text: Record<string, string>;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const previewUrl = record.mockupUrl || record.patternUrl || record.cleanPatternUrl;
@@ -739,7 +838,7 @@ function ProjectCard({ record, selected, onToggleSelect, onRestore, onExport, on
         </div>
       )}
       <div className="aspect-video overflow-hidden rounded-md border border-stone-200 bg-white" onClick={onToggleSelect || onRestore}>
-        {previewUrl ? <img src={previewUrl} alt={record.title} className="h-full w-full object-contain" /> : <div className="grid h-full place-items-center text-xs text-stone-400">无预览</div>}
+        {previewUrl ? <img src={previewUrl} alt={record.title} className="h-full w-full object-contain" /> : <div className="grid h-full place-items-center text-xs text-stone-400">{text.noPreview}</div>}
       </div>
       <div className="mt-2 flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
@@ -755,14 +854,14 @@ function ProjectCard({ record, selected, onToggleSelect, onRestore, onExport, on
             <>
               <div className="fixed inset-0" onClick={() => setShowMenu(false)} />
               <div className="absolute right-0 top-8 z-20 w-48 rounded-md border border-stone-200 bg-white py-1 shadow-lg">
-                <MenuItem onClick={() => { onExport("png"); setShowMenu(false); }}>📄 图纸 PNG</MenuItem>
-                <MenuItem onClick={() => { onExport("preview"); setShowMenu(false); }}>🖼️ 预览 PNG</MenuItem>
-                <MenuItem onClick={() => { onExport("csv"); setShowMenu(false); }}>📊 导出 CSV</MenuItem>
-                <MenuItem onClick={() => { onExport("pdf"); setShowMenu(false); }}>📝 导出 PDF</MenuItem>
+                <MenuItem onClick={() => { onExport("png"); setShowMenu(false); }}>📄 {text.patternPng}</MenuItem>
+                <MenuItem onClick={() => { onExport("preview"); setShowMenu(false); }}>🖼️ {text.previewPng}</MenuItem>
+                <MenuItem onClick={() => { onExport("csv"); setShowMenu(false); }}>📊 CSV</MenuItem>
+                <MenuItem onClick={() => { onExport("pdf"); setShowMenu(false); }}>📝 PDF</MenuItem>
                 <hr className="my-1 border-stone-200" />
-                <MenuItem onClick={() => { onRestore(); setShowMenu(false); }}>📂 恢复进度</MenuItem>
-                <MenuItem onClick={() => { onPublish(); setShowMenu(false); }}>🌐 发布到社区</MenuItem>
-                <MenuItem onClick={() => { if (confirm("确定删除？")) { onDelete(); setShowMenu(false); } }} className="text-red-600">🗑️ 删除记录</MenuItem>
+                <MenuItem onClick={() => { onRestore(); setShowMenu(false); }}>📂 {text.restoreProgress}</MenuItem>
+                <MenuItem onClick={() => { onPublish(); setShowMenu(false); }}>🌐 {text.publishCommunity}</MenuItem>
+                <MenuItem onClick={() => { if (confirm(text.deleteOneConfirm)) { onDelete(); setShowMenu(false); } }} className="text-red-600">🗑️ {text.deleteRecord}</MenuItem>
               </div>
             </>
           )}
