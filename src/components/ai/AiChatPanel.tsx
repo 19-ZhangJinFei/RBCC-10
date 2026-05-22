@@ -6,9 +6,12 @@ import {
   checkServerEnvConfig,
   isApiConfigured,
   loadAiChatHistory,
+  loadAiChatMode,
   saveAiChatHistory,
+  saveAiChatMode,
   streamChatMessage,
   type ChatMessage,
+  type ChatMode,
 } from "@/utils/aiChat";
 
 type Props = {
@@ -72,35 +75,25 @@ function renderMarkdown(content: string): ReactNode {
   return nodes;
 }
 
-// Module-level persistence: survives component mount/unmount so switching pages
-// does NOT abort an in-flight AI request. This allows:
-//   - Returning to the AI page and still seeing the results
-//   - Interrupting a request that was started before navigating away
-let _pendingAbortController: AbortController | null = null;
+let pendingAbortController: AbortController | null = null;
 
 export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, embedded = false }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>(() => loadAiChatHistory());
+  const [mode, setMode] = useState<ChatMode>(() => loadAiChatMode());
   const [input, setInput] = useState("");
-  // Restore loading state if there's a still-pending request from a previous mount
   const [loading, setLoading] = useState(
-    () => _pendingAbortController !== null && !_pendingAbortController.signal.aborted,
+    () => pendingAbortController !== null && !pendingAbortController.signal.aborted,
   );
   const [error, setError] = useState<string | null>(null);
   const [showApiWarning, setShowApiWarning] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const resetTokenRef = useRef(resetToken);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const assistantIndexRef = useRef(-1);
 
-  // Re-connect the module-level AbortController on mount so interrupt works
   useEffect(() => {
-    if (_pendingAbortController && !_pendingAbortController.signal.aborted) {
-      abortControllerRef.current = _pendingAbortController;
+    if (pendingAbortController && !pendingAbortController.signal.aborted) {
+      abortControllerRef.current = pendingAbortController;
     }
-    return () => {
-      // Do NOT abort on unmount — let the request complete in the background
-      // so results are available when user returns to this page.
-    };
   }, []);
 
   useEffect(() => {
@@ -113,27 +106,27 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Save to localStorage immediately whenever messages change.
-  // This ensures background-completed images are persisted even if the
-  // component unmounts before React's flush.
   useEffect(() => {
     saveAiChatHistory(messages);
   }, [messages]);
 
   useEffect(() => {
+    saveAiChatMode(mode);
+  }, [mode]);
+
+  useEffect(() => {
     if (resetTokenRef.current === resetToken) return;
     resetTokenRef.current = resetToken;
-    _pendingAbortController?.abort();
-    _pendingAbortController = null;
+    pendingAbortController?.abort();
+    pendingAbortController = null;
     abortControllerRef.current = null;
     setMessages(DEFAULT_CHAT_MESSAGES);
     setError(null);
     setInput("");
     setLoading(false);
+    setMode("text");
   }, [resetToken]);
 
-  // Helper: persist messages to localStorage immediately (not just via effect)
-  // so background requests that complete after unmount are not lost.
   function persistMessages(updater: (prev: ChatMessage[]) => ChatMessage[]) {
     setMessages((prev) => {
       const next = updater(prev);
@@ -152,31 +145,33 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
     const userMsg: ChatMessage = { role: "user", content: text };
     const nextMessages = [...messages, userMsg];
     const assistantIndex = nextMessages.length;
-    assistantIndexRef.current = assistantIndex;
 
-    // Use module-level AbortController so it survives remount
     const abortController = new AbortController();
-    _pendingAbortController = abortController;
+    pendingAbortController = abortController;
     abortControllerRef.current = abortController;
 
-    persistMessages(() => [...nextMessages, { role: "assistant", content: "正在生成图像..." }]);
+    persistMessages(() => [
+      ...nextMessages,
+      { role: "assistant", content: mode === "image" ? "正在生成图像..." : "正在思考..." },
+    ]);
     setLoading(true);
 
     try {
       await streamChatMessage(
         nextMessages,
+        mode,
         (content) => {
           persistMessages((prev) =>
-            prev.map((item, index) =>
-              index === assistantIndex ? { ...item, content } : item,
-            ),
+            prev.map((item, index) => (
+              index === assistantIndex ? { ...item, content } : item
+            )),
           );
         },
         (imageUrl) => {
           persistMessages((prev) =>
-            prev.map((item, index) =>
-              index === assistantIndex ? { ...item, imageUrl } : item,
-            ),
+            prev.map((item, index) => (
+              index === assistantIndex ? { ...item, imageUrl } : item
+            )),
           );
         },
         abortController.signal,
@@ -184,31 +179,33 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         persistMessages((prev) =>
-          prev.map((item, index) =>
-            index === assistantIndex ? { role: "assistant", content: "已中断生成。" } : item,
-          ),
+          prev.map((item, index) => (
+            index === assistantIndex
+              ? { role: "assistant", content: mode === "image" ? "已中断生图。" : "已中断回复。" }
+              : item
+          )),
         );
         return;
       }
 
-      const msg = err instanceof Error ? err.message : "发送失败，请重试";
-      setError(msg);
+      const message = err instanceof Error ? err.message : "发送失败，请重试";
+      setError(message);
       persistMessages((prev) =>
-        prev.map((item, index) =>
-          index === assistantIndex ? { role: "assistant", content: `出错了：${msg}` } : item,
-        ),
+        prev.map((item, index) => (
+          index === assistantIndex ? { role: "assistant", content: `出错了：${message}` } : item
+        )),
       );
     } finally {
       setLoading(false);
-      _pendingAbortController = null;
+      pendingAbortController = null;
       if (abortControllerRef.current === abortController) {
         abortControllerRef.current = null;
       }
     }
-  }, [input, loading, messages]);
+  }, [input, loading, messages, mode]);
 
   const handleInterrupt = useCallback(() => {
-    _pendingAbortController?.abort();
+    pendingAbortController?.abort();
   }, []);
 
   const handleKeyDown = useCallback(
@@ -294,13 +291,35 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
         {error && !loading && (
           <p className="mb-2 text-xs text-red-500">{error}</p>
         )}
+        <div className="mb-3 inline-flex rounded-lg border border-stone-200 bg-stone-50 p-1">
+          <button
+            type="button"
+            onClick={() => setMode("text")}
+            disabled={loading}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+              mode === "text" ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"
+            } disabled:opacity-50`}
+          >
+            文字对话
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("image")}
+            disabled={loading}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+              mode === "image" ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"
+            } disabled:opacity-50`}
+          >
+            生图模式
+          </button>
+        </div>
         <div className="flex gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={showApiWarning ? "请先在设置中配置 API Key..." : "输入生图提示词..."}
+            placeholder={showApiWarning ? "请先在设置中配置 API Key..." : mode === "image" ? "输入生图提示词..." : "输入想聊的问题..."}
             disabled={showApiWarning || loading}
             className="flex-1 rounded-lg border border-stone-300 px-4 py-2.5 text-sm focus:border-[#8f1d21] focus:outline-none focus:ring-1 focus:ring-[#8f1d21] disabled:opacity-50"
             autoFocus
@@ -309,8 +328,8 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
             type="button"
             onClick={loading ? handleInterrupt : handleSend}
             disabled={showApiWarning || (!loading && !input.trim())}
-            aria-label={loading ? "中断生成" : "发送"}
-            title={loading ? "中断生成" : "发送"}
+            aria-label={loading ? (mode === "image" ? "中断生图" : "中断回复") : "发送"}
+            title={loading ? (mode === "image" ? "中断生图" : "中断回复") : "发送"}
             className={loading
               ? "grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#8f1d21] text-white shadow-sm transition hover:bg-[#a82428] disabled:opacity-50"
               : "rounded-lg bg-[#8f1d21] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
