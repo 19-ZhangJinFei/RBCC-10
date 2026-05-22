@@ -72,15 +72,37 @@ function renderMarkdown(content: string): ReactNode {
   return nodes;
 }
 
+// Module-level persistence: survives component mount/unmount so switching pages
+// does NOT abort an in-flight AI request. This allows:
+//   - Returning to the AI page and still seeing the results
+//   - Interrupting a request that was started before navigating away
+let _pendingAbortController: AbortController | null = null;
+let _pendingRequestId = 0;
+
 export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, embedded = false }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>(() => loadAiChatHistory());
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
+  // Restore loading state if there's a still-pending request from a previous mount
+  const [loading, setLoading] = useState(
+    () => _pendingAbortController !== null && !_pendingAbortController.signal.aborted,
+  );
   const [error, setError] = useState<string | null>(null);
   const [showApiWarning, setShowApiWarning] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const resetTokenRef = useRef(resetToken);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const assistantIndexRef = useRef(-1);
+
+  // Re-connect the module-level AbortController on mount so interrupt works
+  useEffect(() => {
+    if (_pendingAbortController && !_pendingAbortController.signal.aborted) {
+      abortControllerRef.current = _pendingAbortController;
+    }
+    return () => {
+      // Do NOT abort on unmount — let the request complete in the background
+      // so results are available when user returns to this page.
+    };
+  }, []);
 
   useEffect(() => {
     checkServerEnvConfig().then(() => {
@@ -92,6 +114,9 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Save to localStorage immediately whenever messages change.
+  // This ensures background-completed images are persisted even if the
+  // component unmounts before React's flush.
   useEffect(() => {
     saveAiChatHistory(messages);
   }, [messages]);
@@ -99,7 +124,8 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
   useEffect(() => {
     if (resetTokenRef.current === resetToken) return;
     resetTokenRef.current = resetToken;
-    abortControllerRef.current?.abort();
+    _pendingAbortController?.abort();
+    _pendingAbortController = null;
     abortControllerRef.current = null;
     setMessages(DEFAULT_CHAT_MESSAGES);
     setError(null);
@@ -107,11 +133,15 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
     setLoading(false);
   }, [resetToken]);
 
-  useEffect(() => {
-    return () => {
-      abortControllerRef.current?.abort();
-    };
-  }, []);
+  // Helper: persist messages to localStorage immediately (not just via effect)
+  // so background requests that complete after unmount are not lost.
+  function persistMessages(updater: (prev: ChatMessage[]) => ChatMessage[]) {
+    setMessages((prev) => {
+      const next = updater(prev);
+      saveAiChatHistory(next);
+      return next;
+    });
+  }
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
@@ -123,24 +153,28 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
     const userMsg: ChatMessage = { role: "user", content: text };
     const nextMessages = [...messages, userMsg];
     const assistantIndex = nextMessages.length;
+    assistantIndexRef.current = assistantIndex;
+
+    // Use module-level AbortController so it survives remount
     const abortController = new AbortController();
+    _pendingAbortController = abortController;
     abortControllerRef.current = abortController;
 
-    setMessages([...nextMessages, { role: "assistant", content: "正在生成图像..." }]);
+    persistMessages(() => [...nextMessages, { role: "assistant", content: "正在生成图像..." }]);
     setLoading(true);
 
     try {
       await streamChatMessage(
         nextMessages,
         (content) => {
-          setMessages((prev) =>
+          persistMessages((prev) =>
             prev.map((item, index) =>
               index === assistantIndex ? { ...item, content } : item,
             ),
           );
         },
         (imageUrl) => {
-          setMessages((prev) =>
+          persistMessages((prev) =>
             prev.map((item, index) =>
               index === assistantIndex ? { ...item, imageUrl } : item,
             ),
@@ -150,7 +184,7 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
       );
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
-        setMessages((prev) =>
+        persistMessages((prev) =>
           prev.map((item, index) =>
             index === assistantIndex ? { role: "assistant", content: "已中断生成。" } : item,
           ),
@@ -160,13 +194,14 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
 
       const msg = err instanceof Error ? err.message : "发送失败，请重试";
       setError(msg);
-      setMessages((prev) =>
+      persistMessages((prev) =>
         prev.map((item, index) =>
           index === assistantIndex ? { role: "assistant", content: `出错了：${msg}` } : item,
         ),
       );
     } finally {
       setLoading(false);
+      _pendingAbortController = null;
       if (abortControllerRef.current === abortController) {
         abortControllerRef.current = null;
       }
@@ -174,7 +209,7 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
   }, [input, loading, messages]);
 
   const handleInterrupt = useCallback(() => {
-    abortControllerRef.current?.abort();
+    _pendingAbortController?.abort();
   }, []);
 
   const handleKeyDown = useCallback(
