@@ -131,7 +131,7 @@ const showcase = [
     element: "宫墙",
     meaning: "故宫宫廷纹样体现皇家建筑、礼制色彩与吉祥纹饰，适合庄重、华丽、纪念品风格的设计。",
     colors: ["#8F1D21", "#F2C94C", "#1B4F9C", "#D6A23A", "#F8E8C8"],
-    previewImage: "/showcase/宫墙龙纹.png",
+    previewImage: "/showcase/forbidden-city-dragon-draft.png",
   },
   {
     title: "山海瑞兽",
@@ -139,6 +139,7 @@ const showcase = [
     element: "瑞兽",
     meaning: "围绕山海经瑞兽意象组织羽翼、山纹与日月符号，用墨黑、朱红、青绿和金黄形成神话感轮廓。",
     colors: ["#1D1414", "#D30022", "#166F41", "#FFC830"],
+    previewImage: "/showcase/auspicious-beast-coaster-draft.png",
   },
 ];
 
