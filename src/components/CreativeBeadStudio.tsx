@@ -2676,51 +2676,51 @@ export default function CreativeBeadStudio() {
                   </div>
                 </div>
               </div>
+              {/* 精选主题 — 始终展示 */}
+              <div className="max-h-[42rem] overflow-y-auto pb-12 pr-2">
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                {showcase.map((item) => (
+                  <button
+                    key={item.title}
+                    type="button"
+                    onClick={() => {
+                      setTheme(item.theme);
+                      setElement(item.element);
+                      setMeaning(item.meaning);
+                      applyProductConfigDefault("coaster");
+                      // 预设该模板的推荐配色到调色板
+                      setForcedColors(item.colors);
+                      clearPatternArtifacts();
+                      setSourceImageUrl(null);
+                      setExtractedImageUrl(null);
+                      clearResultSubjectSelection();
+                      setSubjectAnalysis(null);
+                      setSubjectMaskSnapshot(null);
+                      clearSubjectIdentification();
+                      setSubjectDirty(false);
+                      resetAutoSaveTracking();
+                      directOutputRef.current = false;
+                      setView("start");
+                      setStep("config");
+                    }}
+                    className="w-full rounded-lg border border-white/15 bg-white/8 p-5 text-left text-white transition hover:bg-white/15 hover:ring-2 hover:ring-[#f2c46d]"
+                  >
+                    {item.previewImage ? (
+                      <div className="aspect-square overflow-hidden rounded-md border border-white/15 bg-white/10">
+                        <img src={item.previewImage} alt={item.title} className="h-full w-full object-cover" />
+                      </div>
+                    ) : (
+                      <PatternMiniature colors={item.colors} />
+                    )}
+                    <h2 className="mt-4 text-lg font-semibold">{item.title}</h2>
+                    <p className="mt-1 text-sm text-stone-300">{item.theme}主题配色</p>
+                  </button>
+                ))}
+                </div>
+              </div>
+
               {/* 纹样滚动带 — 始终展示 */}
               <ScrollingPatternBand />
-            </div>
-
-            {/* 精选主题 — 始终展示 */}
-            <div className="mx-auto max-h-[42rem] max-w-7xl overflow-y-auto px-4 pb-12 pr-2 sm:px-6 lg:px-8">
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {showcase.map((item) => (
-                <button
-                  key={item.title}
-                  type="button"
-                  onClick={() => {
-                    setTheme(item.theme);
-                    setElement(item.element);
-                    setMeaning(item.meaning);
-                    applyProductConfigDefault("coaster");
-                    // 预设该模板的推荐配色到调色板
-                    setForcedColors(item.colors);
-                    clearPatternArtifacts();
-                    setSourceImageUrl(null);
-                    setExtractedImageUrl(null);
-                    clearResultSubjectSelection();
-                    setSubjectAnalysis(null);
-                    setSubjectMaskSnapshot(null);
-                    clearSubjectIdentification();
-                    setSubjectDirty(false);
-                    resetAutoSaveTracking();
-                    directOutputRef.current = false;
-                    setView("start");
-                    setStep("config");
-                  }}
-                  className="w-full rounded-lg border border-white/15 bg-white/8 p-5 text-left text-white transition hover:bg-white/15 hover:ring-2 hover:ring-[#f2c46d]"
-                >
-                  {item.previewImage ? (
-                    <div className="aspect-square overflow-hidden rounded-md border border-white/15 bg-white/10">
-                      <img src={item.previewImage} alt={item.title} className="h-full w-full object-cover" />
-                    </div>
-                  ) : (
-                    <PatternMiniature colors={item.colors} />
-                  )}
-                  <h2 className="mt-4 text-lg font-semibold">{item.title}</h2>
-                  <p className="mt-1 text-sm text-stone-300">{item.theme}主题配色</p>
-                </button>
-              ))}
-              </div>
             </div>
           </section>
 
