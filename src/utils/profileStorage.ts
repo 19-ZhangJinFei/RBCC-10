@@ -4,6 +4,7 @@ const API_CONFIG_KEY = "douyun_api_config";
 const PROJECT_HISTORY_KEY = "douyun_project_history";
 const USERS_KEY = "douyun_users";
 const CURRENT_USER_KEY = "douyun_current_user";
+export const DEFAULT_AUTO_SAVE_INTERVAL_SECONDS = 30;
 
 function isAvailable(): boolean {
   if (typeof window === "undefined") return false;
@@ -145,11 +146,22 @@ export function getSystemAvatarEmoji(index: number): string {
 
 /* ──────── API 配置 ──────── */
 
+export function normalizeAutoSaveIntervalSeconds(value: unknown): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return DEFAULT_AUTO_SAVE_INTERVAL_SECONDS;
+  return Math.max(5, Math.min(600, Math.round(parsed)));
+}
+
 export function loadApiConfig(): ApiConfig | null {
   if (!isAvailable()) return null;
   try {
     const raw = localStorage.getItem(API_CONFIG_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ApiConfig;
+    return {
+      ...parsed,
+      autoSaveIntervalSeconds: normalizeAutoSaveIntervalSeconds(parsed.autoSaveIntervalSeconds),
+    };
   } catch {
     return null;
   }
@@ -158,7 +170,10 @@ export function loadApiConfig(): ApiConfig | null {
 export function saveApiConfig(config: ApiConfig): void {
   if (!isAvailable()) return;
   try {
-    localStorage.setItem(API_CONFIG_KEY, JSON.stringify(config));
+    localStorage.setItem(API_CONFIG_KEY, JSON.stringify({
+      ...config,
+      autoSaveIntervalSeconds: normalizeAutoSaveIntervalSeconds(config.autoSaveIntervalSeconds),
+    }));
   } catch (e) {
     console.error("保存 API 配置失败:", e);
   }

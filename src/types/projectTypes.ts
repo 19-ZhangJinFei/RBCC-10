@@ -6,6 +6,7 @@ export interface ApiConfig {
   imageModelName: string;
   visionModelApiKey?: string;
   visionModelName?: string;
+  autoSaveIntervalSeconds?: number;
   /** 是否使用系统环境变量中的默认模型，为 true 时隐藏 apikey 输入 */
   useDefaultModel?: boolean;
 }

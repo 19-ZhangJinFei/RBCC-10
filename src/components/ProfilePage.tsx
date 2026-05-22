@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ProjectRecord } from "@/types/projectTypes";
+import type { ApiConfig, ProjectRecord } from "@/types/projectTypes";
 import { TEXT_MODEL_OPTIONS, IMAGE_MODEL_OPTIONS, VISION_MODEL_OPTIONS } from "@/types/projectTypes";
 import {
   loadApiConfig,
@@ -13,6 +13,8 @@ import {
   loadCurrentUser,
   updateCurrentUserProfile,
   logoutUser,
+  DEFAULT_AUTO_SAVE_INTERVAL_SECONDS,
+  normalizeAutoSaveIntervalSeconds,
   type StoredUser,
 } from "@/utils/profileStorage";
 import AvatarCropper from "@/components/AvatarCropper";
@@ -23,11 +25,12 @@ type Props = {
   onBack: () => void;
   onRestoreProject: (record: ProjectRecord) => void;
   onLogout?: () => void;
+  onApiConfigSaved?: (config: ApiConfig) => void;
 };
 
-export default function ProfilePage({ onBack, onRestoreProject, onLogout }: Props) {
+export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiConfigSaved }: Props) {
   const [apiConfig, setApiConfig] = useState(() =>
-    loadApiConfig() ?? { textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "", visionModelApiKey: "", visionModelName: "" }
+    loadApiConfig() ?? { textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "", visionModelApiKey: "", visionModelName: "", autoSaveIntervalSeconds: DEFAULT_AUTO_SAVE_INTERVAL_SECONDS }
   );
   const [saved, setSaved] = useState(false);
   const [showTextKey, setShowTextKey] = useState(false);
@@ -139,7 +142,17 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout }: Prop
       .finally(() => setEnvLoading(false));
   }, [apiConfig.useDefaultModel]);
 
-  const handleSaveApi = useCallback(() => { saveApiConfig(apiConfig); setSaved(true); setTimeout(() => setSaved(false), 2000); }, [apiConfig]);
+  const handleSaveApi = useCallback(() => {
+    const normalizedConfig: ApiConfig = {
+      ...apiConfig,
+      autoSaveIntervalSeconds: normalizeAutoSaveIntervalSeconds(apiConfig.autoSaveIntervalSeconds),
+    };
+    saveApiConfig(normalizedConfig);
+    setApiConfig(normalizedConfig);
+    onApiConfigSaved?.(normalizedConfig);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }, [apiConfig, onApiConfigSaved]);
 
   const handleExport = useCallback((record: ProjectRecord, format: "png" | "preview" | "csv" | "pdf") => {
     const title = record.title || "豆韵作品";
@@ -185,9 +198,9 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout }: Prop
 
   const confirmLogout = useCallback(() => {
     logoutUser();
-    saveApiConfig({ textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "", visionModelApiKey: "", visionModelName: "" });
+    saveApiConfig({ textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "", visionModelApiKey: "", visionModelName: "", autoSaveIntervalSeconds: DEFAULT_AUTO_SAVE_INTERVAL_SECONDS });
     setProfile({ nickname: "豆韵用户", avatarUrl: "", createdAt: Date.now() });
-    setApiConfig({ textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "", visionModelApiKey: "", visionModelName: "" });
+    setApiConfig({ textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "", visionModelApiKey: "", visionModelName: "", autoSaveIntervalSeconds: DEFAULT_AUTO_SAVE_INTERVAL_SECONDS });
     setHistory(loadProjectHistory());
     setSelectedIds(new Set());
     setBatchMode(false);
@@ -403,6 +416,24 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout }: Prop
                 </>
               )}
             </div>
+          </div>
+          <div className="mt-6 rounded-md border border-stone-200 bg-stone-50 p-4">
+            <label className="text-sm font-medium text-stone-800">
+              自动保存间隔
+              <div className="mt-2 flex max-w-xs items-center gap-3">
+                <input
+                  type="number"
+                  min={5}
+                  max={600}
+                  step={5}
+                  value={apiConfig.autoSaveIntervalSeconds ?? DEFAULT_AUTO_SAVE_INTERVAL_SECONDS}
+                  onChange={(e) => setApiConfig(p => ({ ...p, autoSaveIntervalSeconds: Number(e.target.value) }))}
+                  className="w-28 rounded-md border border-stone-300 px-3 py-2 text-sm"
+                />
+                <span className="text-sm text-stone-500">秒</span>
+              </div>
+              <p className="mt-2 text-xs leading-6 text-stone-500">创作进行中会按这个间隔自动保存到历史作品，默认 30 秒。</p>
+            </label>
           </div>
           <div className="mt-4 flex items-center gap-3">
             <button type="button" onClick={handleSaveApi} className="rounded-md bg-[#8f1d21] px-4 py-2 text-sm font-semibold text-white">保存配置</button>

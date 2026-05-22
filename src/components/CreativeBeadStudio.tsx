@@ -8,7 +8,7 @@ import SubjectMaskEditor, { type MaskMode } from "@/components/SubjectMaskEditor
 import LoginModal from "@/components/LoginModal";
 import AiChatPanel from "@/components/ai/AiChatPanel";
 import { clearAiChatHistory } from "@/utils/aiChat";
-import { deleteProjectRecord, loadProjectHistory, saveProjectRecord, loadCurrentUserProfile, loadApiConfig, type StoredUser } from "@/utils/profileStorage";
+import { deleteProjectRecord, loadProjectHistory, saveProjectRecord, loadCurrentUserProfile, loadApiConfig, DEFAULT_AUTO_SAVE_INTERVAL_SECONDS, normalizeAutoSaveIntervalSeconds, type StoredUser } from "@/utils/profileStorage";
 import { fetchCommunityPosts, publishCommunityPost } from "@/utils/communityForum";
 import type { ProjectRecord } from "@/types/projectTypes";
 import type { CommunityPost as CloudCommunityPost } from "@/types/community";
@@ -115,6 +115,7 @@ const showcase = [
     element: "莲花",
     meaning: "以青花瓷蓝白配色表现莲花的清雅与洁净，适合转译为轮廓简洁、留白明确的杯垫底稿。",
     colors: ["#FFFFFF", "#1557A8", "#3677D2", "#CDE8FF"],
+    previewImage: "/showcase/qinghua-lotus-draft.png",
   },
   {
     title: "敦煌飞天",
@@ -807,6 +808,8 @@ export default function CreativeBeadStudio() {
   }, []);
 
   const restoringRef = useRef(false);
+  const currentProjectIdRef = useRef<string | null>(null);
+  const lastAutoSaveSignatureRef = useRef<string>("");
 
   const [confirmNew, setConfirmNew] = useState<"ai" | "sample" | "upload" | null>(null);
   const pendingUploadRef = useRef<File | null>(null);
@@ -814,6 +817,7 @@ export default function CreativeBeadStudio() {
   const [loginModalStep, setLoginModalStep] = useState<"login" | "register">("login");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [toastType, setToastType] = useState<"warning" | "success">("warning");
+  const [autoSaveIntervalSeconds, setAutoSaveIntervalSeconds] = useState(() => normalizeAutoSaveIntervalSeconds(loadApiConfig()?.autoSaveIntervalSeconds ?? DEFAULT_AUTO_SAVE_INTERVAL_SECONDS));
   const [aiChatResetToken, setAiChatResetToken] = useState(0);
   const [extractPrompt, setExtractPrompt] = useState<string | null>(null);
   const [subjectAnalysis, setSubjectAnalysis] = useState<SubjectAnalysis | null>(null);
@@ -921,6 +925,11 @@ export default function CreativeBeadStudio() {
 
   const hasUnsavedWork = !!(sourceImageUrl || pattern || patternUrl);
 
+  const resetAutoSaveTracking = useCallback(() => {
+    currentProjectIdRef.current = null;
+    lastAutoSaveSignatureRef.current = "";
+  }, []);
+
   const clearPatternArtifacts = useCallback(() => {
     setPattern(null);
     setPatternUrl(null);
@@ -989,6 +998,7 @@ export default function CreativeBeadStudio() {
 
   const clearCurrentProgress = useCallback(() => {
     directOutputRef.current = false;
+    resetAutoSaveTracking();
     clearPatternArtifacts();
     clearResultSubjectSelection();
     setSourceImageUrl(null);
@@ -1001,11 +1011,12 @@ export default function CreativeBeadStudio() {
     setError(null);
     setConfirmNew(null);
     setStep("config");
-  }, [clearPatternArtifacts, clearResultSubjectSelection, clearSubjectIdentification]);
+  }, [clearPatternArtifacts, clearResultSubjectSelection, clearSubjectIdentification, resetAutoSaveTracking]);
 
   const doUseSample = useCallback(() => {
     clearPatternArtifacts();
     const original = renderSampleDesignOriginal(options);
+    resetAutoSaveTracking();
     directOutputRef.current = true;
     setSubjectAnalysis(null);
     setSubjectMaskSnapshot(null);
@@ -1018,7 +1029,7 @@ export default function CreativeBeadStudio() {
     setError(null);
     setConfirmNew(null);
     setStep("extract");
-  }, [clearPatternArtifacts, clearResultSubjectSelection, clearSubjectIdentification, options]);
+  }, [clearPatternArtifacts, clearResultSubjectSelection, clearSubjectIdentification, options, resetAutoSaveTracking]);
 
   const doUpload = async (file: File) => {
     setLoading(true);
@@ -1030,6 +1041,7 @@ export default function CreativeBeadStudio() {
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
+      resetAutoSaveTracking();
       directOutputRef.current = false;
       setSubjectAnalysis(null);
       setSubjectMaskSnapshot(null);
@@ -1156,6 +1168,7 @@ export default function CreativeBeadStudio() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result?.error ?? "AI 图案生成失败");
+      resetAutoSaveTracking();
       directOutputRef.current = true;
       setSubjectAnalysis(null);
       setSubjectMaskSnapshot(null);
@@ -2165,6 +2178,8 @@ export default function CreativeBeadStudio() {
 
   const handleRestoreProject = useCallback((record: ProjectRecord) => {
     restoringRef.current = true;
+    currentProjectIdRef.current = record.id;
+    lastAutoSaveSignatureRef.current = "";
     // 恢复所有状态
     setTheme(record.theme);
     setElement(record.element);
@@ -2200,12 +2215,35 @@ export default function CreativeBeadStudio() {
   }, [clearResultSubjectSelection, clearSubjectIdentification]);
 
   // 自动保存当前作品到历史记录
-  const buildCurrentProjectRecord = useCallback((title?: string): ProjectRecord => ({
-    id: `proj_${Date.now()}`,
-    title: title ?? `${theme} · ${element}`,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    completed: step === "preview" && !!pattern,
+  const buildCurrentProjectRecord = useCallback((title?: string): ProjectRecord => {
+    const id = currentProjectIdRef.current ?? `proj_${Date.now()}`;
+    currentProjectIdRef.current = id;
+    return {
+      id,
+      title: title ?? `${theme} · ${element}`,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      completed: step === "preview" && !!pattern,
+      theme,
+      element,
+      meaning,
+      productId,
+      gridSize,
+      colorCount,
+      aspectRatio,
+      showGrid,
+      antiAlias,
+      sourceImageUrl,
+      extractedImageUrl,
+      patternData: pattern ? JSON.stringify(pattern) : null,
+      patternUrl,
+      cleanPatternUrl,
+      mockupUrl: null,
+      productSceneUrl: null,
+    };
+  }, [antiAlias, aspectRatio, cleanPatternUrl, colorCount, element, extractedImageUrl, gridSize, meaning, pattern, patternUrl, productId, showGrid, sourceImageUrl, step, theme]);
+
+  const buildCurrentProjectSignature = useCallback(() => JSON.stringify({
     theme,
     element,
     meaning,
@@ -2220,9 +2258,7 @@ export default function CreativeBeadStudio() {
     patternData: pattern ? JSON.stringify(pattern) : null,
     patternUrl,
     cleanPatternUrl,
-    mockupUrl: null,
-    productSceneUrl: null,
-  }), [antiAlias, aspectRatio, cleanPatternUrl, colorCount, element, extractedImageUrl, gridSize, meaning, pattern, patternUrl, productId, showGrid, sourceImageUrl, step, theme]);
+  }), [antiAlias, aspectRatio, cleanPatternUrl, colorCount, element, extractedImageUrl, gridSize, meaning, pattern, patternUrl, productId, showGrid, sourceImageUrl, theme]);
 
   const publishCurrentWork = useCallback(async () => {
     if (!sourceImageUrl && !pattern && !patternUrl) {
@@ -2332,32 +2368,20 @@ export default function CreativeBeadStudio() {
     if (view !== "start") return;
     if (!sourceImageUrl && !pattern) return;
 
-    const record: ProjectRecord = {
-      id: `proj_${Date.now()}`,
-      title: `${theme} · ${element}`,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      completed: step === "preview" && !!pattern,
-      theme,
-      element,
-      meaning,
-      productId,
-      gridSize,
-      colorCount,
-      aspectRatio,
-      showGrid,
-      antiAlias,
-      sourceImageUrl,
-      extractedImageUrl,
-      patternData: pattern ? JSON.stringify(pattern) : null,
-      patternUrl,
-      cleanPatternUrl,
-      mockupUrl: null,
-      productSceneUrl: null,
-    };
-    saveProjectRecord(record);
-    refreshProjectRecords();
-  }, [view, step, theme, element, meaning, productId, gridSize, colorCount, aspectRatio, showGrid, antiAlias, pattern, patternUrl, cleanPatternUrl, sourceImageUrl, extractedImageUrl, refreshProjectRecords]);
+    const intervalMs = normalizeAutoSaveIntervalSeconds(autoSaveIntervalSeconds) * 1000;
+    const timer = setInterval(() => {
+      const signature = buildCurrentProjectSignature();
+      if (signature === lastAutoSaveSignatureRef.current) return;
+      const record = buildCurrentProjectRecord();
+      saveProjectRecord(record);
+      lastAutoSaveSignatureRef.current = signature;
+      refreshProjectRecords();
+      setToastType("success");
+      setToastMsg("作品已自动保存到历史作品。");
+    }, intervalMs);
+
+    return () => clearInterval(timer);
+  }, [autoSaveIntervalSeconds, buildCurrentProjectRecord, buildCurrentProjectSignature, pattern, refreshProjectRecords, sourceImageUrl, view]);
 
   // 帮助页面：当 details 离开视口时自动收起
   useEffect(() => {
@@ -2476,6 +2500,9 @@ export default function CreativeBeadStudio() {
         <ProfilePage
           onBack={() => setView("home")}
           onRestoreProject={handleRestoreProject}
+          onApiConfigSaved={(config) => {
+            setAutoSaveIntervalSeconds(normalizeAutoSaveIntervalSeconds(config.autoSaveIntervalSeconds));
+          }}
           onLogout={() => {
             clearAiChatHistory();
             setAiChatResetToken((value) => value + 1);
@@ -2524,7 +2551,8 @@ export default function CreativeBeadStudio() {
             </div>
 
             {/* 精选主题 — 始终展示 */}
-            <div className="mx-auto grid max-w-7xl gap-5 px-4 pb-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
+            <div className="mx-auto max-h-[42rem] max-w-7xl overflow-y-auto px-4 pb-12 pr-2 sm:px-6 lg:px-8">
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {showcase.map((item) => (
                 <button
                   key={item.title}
@@ -2544,17 +2572,25 @@ export default function CreativeBeadStudio() {
                     setSubjectMaskSnapshot(null);
                     clearSubjectIdentification();
                     setSubjectDirty(false);
+                    resetAutoSaveTracking();
                     directOutputRef.current = false;
                     setView("start");
                     setStep("config");
                   }}
                   className="w-full rounded-lg border border-white/15 bg-white/8 p-5 text-left text-white transition hover:bg-white/15 hover:ring-2 hover:ring-[#f2c46d]"
                 >
-                  <PatternMiniature colors={item.colors} />
+                  {item.previewImage ? (
+                    <div className="aspect-square overflow-hidden rounded-md border border-white/15 bg-white/10">
+                      <img src={item.previewImage} alt={item.title} className="h-full w-full object-cover" />
+                    </div>
+                  ) : (
+                    <PatternMiniature colors={item.colors} />
+                  )}
                   <h2 className="mt-4 text-lg font-semibold">{item.title}</h2>
                   <p className="mt-1 text-sm text-stone-300">{item.theme}主题配色</p>
                 </button>
               ))}
+              </div>
             </div>
           </section>
 
