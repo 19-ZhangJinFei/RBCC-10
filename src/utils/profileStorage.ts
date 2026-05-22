@@ -182,8 +182,8 @@ export function saveApiConfig(config: ApiConfig): void {
 /* ──────── 项目历史 ──────── */
 
 const ANONYMOUS_PROJECT_KEY = `${PROJECT_HISTORY_KEY}:__anonymous__`;
-const MAX_INLINE_IMAGE_BYTES = 900_000;
-const MAX_PATTERN_DATA_BYTES = 1_200_000;
+const MAX_INLINE_IMAGE_BYTES = 280_000;
+const MAX_PATTERN_DATA_BYTES = 240_000;
 
 function getProjectHistoryKey(): string {
   const username = loadCurrentUser();
@@ -196,21 +196,19 @@ function keepSmallDataUrl(value: string | null | undefined, maxBytes = MAX_INLIN
 }
 
 function compactProjectRecord(record: ProjectRecord): ProjectRecord {
-  const compactPatternUrl = keepSmallDataUrl(record.patternUrl)
-    ?? keepSmallDataUrl(record.cleanPatternUrl)
-    ?? keepSmallDataUrl(record.mockupUrl)
-    ?? keepSmallDataUrl(record.extractedImageUrl)
-    ?? keepSmallDataUrl(record.sourceImageUrl);
+  const compactPatternUrl = keepSmallDataUrl(record.cleanPatternUrl)
+    ?? keepSmallDataUrl(record.patternUrl)
+    ?? keepSmallDataUrl(record.mockupUrl);
 
   return {
     ...record,
-    sourceImageUrl: keepSmallDataUrl(record.sourceImageUrl),
-    extractedImageUrl: keepSmallDataUrl(record.extractedImageUrl),
+    sourceImageUrl: null,
+    extractedImageUrl: keepSmallDataUrl(record.extractedImageUrl, Math.floor(MAX_INLINE_IMAGE_BYTES * 0.7)),
     patternData: record.patternData && record.patternData.length <= MAX_PATTERN_DATA_BYTES ? record.patternData : null,
     patternUrl: compactPatternUrl,
-    cleanPatternUrl: keepSmallDataUrl(record.cleanPatternUrl),
-    mockupUrl: keepSmallDataUrl(record.mockupUrl),
-    productSceneUrl: keepSmallDataUrl(record.productSceneUrl),
+    cleanPatternUrl: keepSmallDataUrl(record.cleanPatternUrl, Math.floor(MAX_INLINE_IMAGE_BYTES * 0.8)),
+    mockupUrl: null,
+    productSceneUrl: null,
   };
 }
 

@@ -44,6 +44,15 @@ type ProductConfigDefault = {
   colorCount: number;
 };
 
+type CompactPatternPayload = {
+  v: 1;
+  width: number;
+  height: number;
+  palette: string[];
+  source: BeadPattern["source"];
+  cells: string;
+};
+
 const emptySubjectIdentification: SubjectIdentification = {
   subject: "",
   category: "",
@@ -69,6 +78,66 @@ function splitLines(value: string): string[] {
     .split(/\r?\n/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function buildDefaultProjectTitle(theme: string, element: string, productLabel: string): string {
+  return `${theme} · ${element} · ${productLabel}`;
+}
+
+function serializePattern(pattern: BeadPattern | null): string | null {
+  if (!pattern) return null;
+  const palette = pattern.palette.map((color) => color.toUpperCase());
+  const paletteIndex = new Map(palette.map((color, index) => [color, index]));
+  const cells = pattern.grid.flat().map((pixel) => {
+    if (pixel.isExternal) return "__";
+    const index = paletteIndex.get(pixel.color.toUpperCase()) ?? 0;
+    return index.toString(36).padStart(2, "0");
+  }).join("");
+
+  const payload: CompactPatternPayload = {
+    v: 1,
+    width: pattern.width,
+    height: pattern.height,
+    palette,
+    source: pattern.source,
+    cells,
+  };
+
+  return JSON.stringify(payload);
+}
+
+function deserializePattern(raw: string | null): BeadPattern | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as CompactPatternPayload | BeadPattern;
+    if ("v" in parsed && parsed.v === 1) {
+      const grid: BeadPattern["grid"] = [];
+      for (let y = 0; y < parsed.height; y += 1) {
+        const row: BeadPattern["grid"][number] = [];
+        for (let x = 0; x < parsed.width; x += 1) {
+          const token = parsed.cells.slice((y * parsed.width + x) * 2, (y * parsed.width + x + 1) * 2);
+          if (token === "__") {
+            row.push({ key: "", color: "#FFFFFF", isExternal: true });
+            continue;
+          }
+          const paletteIndex = Number.parseInt(token, 36);
+          const color = parsed.palette[paletteIndex] ?? parsed.palette[0] ?? "#000000";
+          row.push({ key: getDisplayColorKey(color), color });
+        }
+        grid.push(row);
+      }
+      return {
+        width: parsed.width,
+        height: parsed.height,
+        palette: parsed.palette,
+        source: parsed.source,
+        grid,
+      };
+    }
+    return parsed as BeadPattern;
+  } catch {
+    return null;
+  }
 }
 
 const navItems: { id: SiteView; label: string }[] = [
@@ -786,6 +855,10 @@ export default function CreativeBeadStudio() {
     () => cultureThemes.find((item) => item.name === theme || item.id === theme),
     [theme],
   );
+  const defaultProjectTitle = useMemo(
+    () => buildDefaultProjectTitle(theme, element, formLabel),
+    [element, formLabel, theme],
+  );
 
   const [currentUser, setCurrentUser] = useState<StoredUser | null>(() => loadCurrentUserProfile());
   const [projectQuery, setProjectQuery] = useState("");
@@ -843,6 +916,7 @@ export default function CreativeBeadStudio() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [toastType, setToastType] = useState<"warning" | "success">("warning");
   const [projectTitleDraft, setProjectTitleDraft] = useState("");
+  const [projectTitleManual, setProjectTitleManual] = useState(false);
   const [autoSaveIntervalSeconds, setAutoSaveIntervalSeconds] = useState(() => normalizeAutoSaveIntervalSeconds(loadApiConfig()?.autoSaveIntervalSeconds ?? DEFAULT_AUTO_SAVE_INTERVAL_SECONDS));
   const [aiChatResetToken, setAiChatResetToken] = useState(0);
   const [extractPrompt, setExtractPrompt] = useState<string | null>(null);
@@ -1021,16 +1095,16 @@ export default function CreativeBeadStudio() {
   }, [extractedImageUrl, formLabel, gridSize, colorCount, subjectIdentification]);
 
   useEffect(() => {
-    if (currentProjectIdRef.current) return;
-    if (projectTitleDraft.trim().length > 0) return;
-    setProjectTitleDraft(`${theme} · ${element}`);
-  }, [element, projectTitleDraft, theme]);
+    if (projectTitleManual) return;
+    setProjectTitleDraft(defaultProjectTitle);
+  }, [defaultProjectTitle, projectTitleManual]);
 
 
   const clearCurrentProgress = useCallback(() => {
     directOutputRef.current = false;
     resetAutoSaveTracking();
     setProjectTitleDraft("");
+    setProjectTitleManual(false);
     clearPatternArtifacts();
     clearResultSubjectSelection();
     setSourceImageUrl(null);
@@ -1050,6 +1124,7 @@ export default function CreativeBeadStudio() {
     const original = renderSampleDesignOriginal(options);
     resetAutoSaveTracking();
     directOutputRef.current = true;
+    setForcedColors(selectedCultureTheme?.paletteHints ?? []);
     setSubjectAnalysis(null);
     setSubjectMaskSnapshot(null);
     clearSubjectIdentification();
@@ -1061,7 +1136,7 @@ export default function CreativeBeadStudio() {
     setError(null);
     setConfirmNew(null);
     setStep("extract");
-  }, [clearPatternArtifacts, clearResultSubjectSelection, clearSubjectIdentification, options, resetAutoSaveTracking]);
+  }, [clearPatternArtifacts, clearResultSubjectSelection, clearSubjectIdentification, options, resetAutoSaveTracking, selectedCultureTheme]);
 
   const doUpload = async (file: File) => {
     setLoading(true);
@@ -1075,6 +1150,7 @@ export default function CreativeBeadStudio() {
       });
       resetAutoSaveTracking();
       directOutputRef.current = false;
+      setForcedColors(selectedCultureTheme?.paletteHints ?? []);
       setSubjectAnalysis(null);
       setSubjectMaskSnapshot(null);
       clearSubjectIdentification();
@@ -1113,6 +1189,7 @@ export default function CreativeBeadStudio() {
     if (!next) return;
     setElement(next.elements[0] ?? "");
     setMeaning(next.meaning);
+    setForcedColors(next.paletteHints);
   };
 
   const applyProductConfigDefault = (nextProductId: string) => {
@@ -1202,6 +1279,7 @@ export default function CreativeBeadStudio() {
       if (!response.ok) throw new Error(result?.error ?? "AI 图案生成失败");
       resetAutoSaveTracking();
       directOutputRef.current = true;
+      setForcedColors(selectedCultureTheme?.paletteHints ?? []);
       setSubjectAnalysis(null);
       setSubjectMaskSnapshot(null);
       clearSubjectIdentification();
@@ -1455,17 +1533,17 @@ export default function CreativeBeadStudio() {
             <div className="mt-5 grid gap-4">
               <label className="text-sm font-medium">
                 传统主题
-                <input
-                  list="culture-theme-options"
+                <select
                   value={theme}
                   onChange={(event) => handleThemeInput(event.target.value)}
-                  className="mt-2 w-full rounded-md border border-stone-300 px-3 py-2"
-                />
-                <datalist id="culture-theme-options">
+                  className="mt-2 max-h-64 w-full rounded-md border border-stone-300 bg-white px-3 py-2"
+                >
                   {cultureThemes.map((item) => (
-                    <option key={item.id} value={item.name} />
+                    <option key={item.id} value={item.name}>
+                      {item.name}
+                    </option>
                   ))}
-                </datalist>
+                </select>
               </label>
               <label className="text-sm font-medium">
                 核心元素
@@ -2169,6 +2247,38 @@ export default function CreativeBeadStudio() {
                   <li>熨完用平整重物压 2-3 分钟，完全冷却后再脱板。</li>
                 </ol>
               </div>
+
+              {renderSubjectIdentificationEditor("preview")}
+              {culturePrompt && (
+                <div className="rounded-lg border border-stone-200 bg-white p-5">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold">AI 文化文案提示词</h2>
+                  </div>
+                  <div className="mt-3 max-h-48 overflow-y-auto rounded-md bg-stone-50 p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap text-stone-600">
+                    {culturePrompt}
+                  </div>
+                </div>
+              )}
+              <div className="rounded-lg border border-stone-200 bg-white p-5">
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="text-xl font-semibold">文化说明</h2>
+                  <button
+                    type="button"
+                    onClick={generateCultureText}
+                    disabled={cultureTextLoading}
+                    className="rounded-md bg-[#8f1d21] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                  >
+                    {cultureTextLoading ? "AI 生成中..." : "AI 生成文化说明"}
+                  </button>
+                </div>
+                {aiCultureCopy ? (
+                  <CultureExplanation copy={aiCultureCopy} />
+                ) : (
+                  <div className="rounded-md border border-dashed border-stone-300 bg-stone-50 p-4 text-sm leading-6 text-stone-500">
+                    点击 AI 生成文化说明后，系统会读取当前再创作图像，并把作品名称、文化来源、图案寓意、设计说明分别填入对应模块。
+                  </div>
+                )}
+              </div>
             </>
 
         </section>
@@ -2208,8 +2318,12 @@ export default function CreativeBeadStudio() {
                 <input
                   type="text"
                   value={projectTitleDraft}
-                  onChange={(event) => setProjectTitleDraft(event.target.value)}
-                  placeholder={`${theme} · ${element}`}
+                  onChange={(event) => {
+                    const nextTitle = event.target.value;
+                    setProjectTitleDraft(nextTitle);
+                    setProjectTitleManual(nextTitle.trim().length > 0 && nextTitle.trim() !== defaultProjectTitle);
+                  }}
+                  placeholder={defaultProjectTitle}
                   className="mt-2 w-full rounded-md border border-stone-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#8f1d21] focus:ring-2 focus:ring-[#8f1d21]/20"
                 />
               </label>
@@ -2253,38 +2367,6 @@ export default function CreativeBeadStudio() {
               </div>
             </div>
           </div>
-          {renderSubjectIdentificationEditor("preview")}
-          {culturePrompt && (
-            <div className="rounded-lg border border-stone-200 bg-white p-5">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">AI 文化文案提示词</h2>
-              </div>
-              <div className="mt-3 max-h-48 overflow-y-auto rounded-md bg-stone-50 p-3 text-xs leading-relaxed text-stone-600 font-mono whitespace-pre-wrap">
-                {culturePrompt}
-              </div>
-            </div>
-          )}
-          <div className="rounded-lg border border-stone-200 bg-white p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xl font-semibold">文化说明</h2>
-              <button
-                type="button"
-                onClick={generateCultureText}
-                disabled={cultureTextLoading}
-                className="rounded-md bg-[#8f1d21] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
-              >
-                {cultureTextLoading ? "AI 生成中..." : "AI 生成文化说明"}
-              </button>
-            </div>
-            {aiCultureCopy ? (
-              <CultureExplanation copy={aiCultureCopy} />
-            ) : (
-              <div className="rounded-md border border-dashed border-stone-300 bg-stone-50 p-4 text-sm leading-6 text-stone-500">
-                点击 AI 生成文化说明后，系统会读取当前再创作图像，并把作品名称、文化来源、图案寓意、设计说明分别填入对应模块。
-              </div>
-            )}
-          </div>
-
         </section>
       </div>
     );
@@ -2299,6 +2381,11 @@ export default function CreativeBeadStudio() {
     currentProjectIdRef.current = record.id;
     lastAutoSaveSignatureRef.current = "";
     setProjectTitleDraft(record.title);
+    setProjectTitleManual(record.title.trim() !== buildDefaultProjectTitle(
+      record.theme,
+      record.element,
+      formLabels.find((item) => item.id === record.productId)?.label ?? "拼豆底板",
+    ));
     // 恢复所有状态
     setTheme(record.theme);
     setElement(record.element);
@@ -2324,15 +2411,7 @@ export default function CreativeBeadStudio() {
     setCleanPatternUrl(record.cleanPatternUrl);
 
     // 恢复 pattern 对象
-    if (record.patternData) {
-      try {
-        setPattern(JSON.parse(record.patternData) as BeadPattern);
-      } catch {
-        setPattern(null);
-      }
-    } else {
-      setPattern(null);
-    }
+    setPattern(deserializePattern(record.patternData));
 
     setStep((record.patternData || record.patternUrl || record.extractedImageUrl || record.sourceImageUrl) ? restoredStep : "config");
     setView("start");
@@ -2347,7 +2426,7 @@ export default function CreativeBeadStudio() {
     currentProjectIdRef.current = id;
     return {
       id,
-      title: title ?? (projectTitleDraft.trim() || `${theme} · ${element}`),
+      title: title ?? (projectTitleDraft.trim() || defaultProjectTitle),
       createdAt: existingRecord?.createdAt ?? Date.now(),
       updatedAt: Date.now(),
       completed: step === "preview" && !!pattern,
@@ -2367,13 +2446,13 @@ export default function CreativeBeadStudio() {
       sourceImageUrl,
       extractedImageUrl,
       extractPrompt,
-      patternData: pattern ? JSON.stringify(pattern) : null,
+      patternData: serializePattern(pattern),
       patternUrl,
       cleanPatternUrl,
       mockupUrl: null,
       productSceneUrl: null,
     };
-  }, [antiAlias, aspectRatio, cleanPatternUrl, colorCount, connectIslands, element, extractPrompt, extractedImageUrl, forcedColors, gridSize, meaning, pattern, patternUrl, productId, projectRecords, projectTitleDraft, selectedFilter, showGrid, sourceImageUrl, step, theme]);
+  }, [antiAlias, aspectRatio, cleanPatternUrl, colorCount, connectIslands, defaultProjectTitle, element, extractPrompt, extractedImageUrl, forcedColors, gridSize, meaning, pattern, patternUrl, productId, projectRecords, projectTitleDraft, selectedFilter, showGrid, sourceImageUrl, step, theme]);
 
   const buildCurrentProjectSignature = useCallback(() => JSON.stringify({
     theme,
@@ -2392,7 +2471,7 @@ export default function CreativeBeadStudio() {
     extractedImageUrl,
     currentStep: step,
     extractPrompt,
-    patternData: pattern ? JSON.stringify(pattern) : null,
+    patternData: serializePattern(pattern),
     patternUrl,
     cleanPatternUrl,
   }), [antiAlias, aspectRatio, cleanPatternUrl, colorCount, connectIslands, element, extractPrompt, extractedImageUrl, forcedColors, gridSize, meaning, pattern, patternUrl, productId, selectedFilter, showGrid, sourceImageUrl, step, theme]);
@@ -2447,8 +2526,9 @@ export default function CreativeBeadStudio() {
     refreshProjectRecords();
     setToastType("success");
     setToastMsg("项目已保存，可在“项目”和个人主页历史记录中继续编辑或发布。");
+    setProjectTitleManual(record.title.trim() !== defaultProjectTitle);
     return true;
-  }, [buildCurrentProjectRecord, buildCurrentProjectSignature, pattern, patternUrl, projectTitleDraft, refreshProjectRecords, sourceImageUrl]);
+  }, [buildCurrentProjectRecord, buildCurrentProjectSignature, defaultProjectTitle, pattern, patternUrl, projectTitleDraft, refreshProjectRecords, sourceImageUrl]);
 
   const importCommunityPost = useCallback((post: CommunityPost) => {
     if (post.record) {
