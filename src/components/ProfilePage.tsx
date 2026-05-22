@@ -73,7 +73,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
   const text = {
     backHome: language === "en" ? "Back Home" : "返回首页",
     profileTitle: language === "en" ? "Profile" : "个人主页",
-    languageTitle: "Language",
+    languageTitle: "中文/Language",
     languageDesc: language === "en"
       ? "Select the system language. Navigation, profile settings, and future AI responses follow this choice."
       : "选择系统语言。导航、个人配置和后续 AI 输出都会跟随此选项。",
