@@ -181,9 +181,11 @@ export function saveApiConfig(config: ApiConfig): void {
 
 /* ──────── 项目历史 ──────── */
 
-function getProjectHistoryKey(): string | null {
+const ANONYMOUS_PROJECT_KEY = `${PROJECT_HISTORY_KEY}:__anonymous__`;
+
+function getProjectHistoryKey(): string {
   const username = loadCurrentUser();
-  return username ? `${PROJECT_HISTORY_KEY}:${username}` : null;
+  return username ? `${PROJECT_HISTORY_KEY}:${username}` : ANONYMOUS_PROJECT_KEY;
 }
 
 export function loadProjectHistory(): ProjectRecord[] {

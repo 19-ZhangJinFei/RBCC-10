@@ -123,6 +123,7 @@ const showcase = [
     element: "飞天",
     meaning: "提取敦煌飞天的飘带、乐舞和壁画色彩，以土黄、赭红与青绿构成具有丝路气息的装饰图案。",
     colors: ["#FCF9E0", "#EDB045", "#943630", "#0B3C43"],
+    previewImage: "/showcase/feitian-coaster-draft.png",
   },
   {
     title: "京剧脸谱",
@@ -856,7 +857,6 @@ export default function CreativeBeadStudio() {
   const [timeDropdownOpen, setTimeDropdownOpen] = useState(false);
   const [culturePrompt, setCulturePrompt] = useState<string | null>(null);
   const [cultureTextLoading, setCultureTextLoading] = useState(false);
-  const subjectIdentificationAutoKeyRef = useRef<string | null>(null);
   const [aiCultureCopy, setAiCultureCopy] = useState<{
     title: string;
     source: string;
@@ -1256,13 +1256,6 @@ export default function CreativeBeadStudio() {
       setSubjectIdentificationLoading(false);
     }
   }, [subjectAnalysis]);
-
-  useEffect(() => {
-    if (!subjectAnalysis || subjectIdentification || subjectIdentificationLoading) return;
-    if (subjectIdentificationAutoKeyRef.current === subjectAnalysis.subjectImageUrl) return;
-    subjectIdentificationAutoKeyRef.current = subjectAnalysis.subjectImageUrl;
-    void identifySubject();
-  }, [identifySubject, subjectAnalysis, subjectIdentification, subjectIdentificationLoading]);
 
   const generateSubjectRecreation = useCallback(async () => {
     if (directOutputRef.current) return;
@@ -2414,23 +2407,19 @@ export default function CreativeBeadStudio() {
       restoringRef.current = false;
       return;
     }
-    if (view !== "start") return;
-    if (!sourceImageUrl && !pattern) return;
-
     const intervalMs = normalizeAutoSaveIntervalSeconds(autoSaveIntervalSeconds) * 1000;
     const timer = setInterval(() => {
+      if (view !== "start") return;
       const signature = buildCurrentProjectSignature();
       if (signature === lastAutoSaveSignatureRef.current) return;
       const record = buildCurrentProjectRecord();
       saveProjectRecord(record);
       lastAutoSaveSignatureRef.current = signature;
       refreshProjectRecords();
-      setToastType("success");
-      setToastMsg("作品已自动保存到历史作品。");
     }, intervalMs);
 
     return () => clearInterval(timer);
-  }, [autoSaveIntervalSeconds, buildCurrentProjectRecord, buildCurrentProjectSignature, pattern, refreshProjectRecords, sourceImageUrl, view]);
+  }, [autoSaveIntervalSeconds, buildCurrentProjectRecord, buildCurrentProjectSignature, refreshProjectRecords, view]);
 
   // 帮助页面：当 details 离开视口时自动收起
   useEffect(() => {
