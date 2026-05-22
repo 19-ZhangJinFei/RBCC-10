@@ -182,10 +182,36 @@ export function saveApiConfig(config: ApiConfig): void {
 /* ──────── 项目历史 ──────── */
 
 const ANONYMOUS_PROJECT_KEY = `${PROJECT_HISTORY_KEY}:__anonymous__`;
+const MAX_INLINE_IMAGE_BYTES = 900_000;
+const MAX_PATTERN_DATA_BYTES = 1_200_000;
 
 function getProjectHistoryKey(): string {
   const username = loadCurrentUser();
   return username ? `${PROJECT_HISTORY_KEY}:${username}` : ANONYMOUS_PROJECT_KEY;
+}
+
+function keepSmallDataUrl(value: string | null | undefined, maxBytes = MAX_INLINE_IMAGE_BYTES): string | null {
+  if (!value) return null;
+  return value.length <= maxBytes ? value : null;
+}
+
+function compactProjectRecord(record: ProjectRecord): ProjectRecord {
+  const compactPatternUrl = keepSmallDataUrl(record.patternUrl)
+    ?? keepSmallDataUrl(record.cleanPatternUrl)
+    ?? keepSmallDataUrl(record.mockupUrl)
+    ?? keepSmallDataUrl(record.extractedImageUrl)
+    ?? keepSmallDataUrl(record.sourceImageUrl);
+
+  return {
+    ...record,
+    sourceImageUrl: keepSmallDataUrl(record.sourceImageUrl),
+    extractedImageUrl: keepSmallDataUrl(record.extractedImageUrl),
+    patternData: record.patternData && record.patternData.length <= MAX_PATTERN_DATA_BYTES ? record.patternData : null,
+    patternUrl: compactPatternUrl,
+    cleanPatternUrl: keepSmallDataUrl(record.cleanPatternUrl),
+    mockupUrl: keepSmallDataUrl(record.mockupUrl),
+    productSceneUrl: keepSmallDataUrl(record.productSceneUrl),
+  };
 }
 
 export function loadProjectHistory(): ProjectRecord[] {
@@ -209,10 +235,10 @@ export function loadProjectHistory(): ProjectRecord[] {
   }
 }
 
-export function saveProjectRecord(record: ProjectRecord): void {
-  if (!isAvailable()) return;
+export function saveProjectRecord(record: ProjectRecord): boolean {
+  if (!isAvailable()) return false;
   const key = getProjectHistoryKey();
-  if (!key) return;
+  if (!key) return false;
   try {
     const list = loadProjectHistory();
     const idx = list.findIndex((p) => p.id === record.id);
@@ -221,9 +247,26 @@ export function saveProjectRecord(record: ProjectRecord): void {
     } else {
       list.unshift(record);
     }
-    localStorage.setItem(key, JSON.stringify(list.slice(0, 100)));
+    const nextList = list.slice(0, 100);
+    try {
+      localStorage.setItem(key, JSON.stringify(nextList));
+      return true;
+    } catch {
+      const compactedList = nextList.map(compactProjectRecord);
+      for (let count = compactedList.length; count >= 1; count -= 1) {
+        try {
+          const trimmedList = compactedList.slice(0, count);
+          localStorage.setItem(key, JSON.stringify(trimmedList));
+          return trimmedList.some((item) => item.id === record.id);
+        } catch {
+          // keep shrinking until the list fits into storage
+        }
+      }
+      throw new Error("project_history_quota_exceeded");
+    }
   } catch (e) {
     console.error("保存项目记录失败:", e);
+    return false;
   }
 }
 

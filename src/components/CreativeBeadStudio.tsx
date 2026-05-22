@@ -2384,7 +2384,12 @@ export default function CreativeBeadStudio() {
       return;
     }
     const record = buildCurrentProjectRecord(projectTitleDraft.trim() || undefined);
-    saveProjectRecord(record);
+    const saved = saveProjectRecord(record);
+    if (!saved) {
+      setToastType("warning");
+      setToastMsg("项目保存失败，当前项目数据过大，无法写入本地存储。");
+      return;
+    }
     refreshProjectRecords();
     try {
       await publishCommunityPost({
@@ -2411,7 +2416,12 @@ export default function CreativeBeadStudio() {
     }
 
     const record = buildCurrentProjectRecord(projectTitleDraft.trim() || undefined);
-    saveProjectRecord(record);
+    const saved = saveProjectRecord(record);
+    if (!saved) {
+      setToastType("warning");
+      setToastMsg("项目保存失败，当前项目数据过大，无法写入本地存储。");
+      return false;
+    }
     lastAutoSaveSignatureRef.current = buildCurrentProjectSignature();
     setProjectTitleDraft(record.title);
     refreshProjectRecords();
@@ -2505,9 +2515,11 @@ export default function CreativeBeadStudio() {
       const signature = buildCurrentProjectSignature();
       if (signature === lastAutoSaveSignatureRef.current) return;
       const record = buildCurrentProjectRecord();
-      saveProjectRecord(record);
-      lastAutoSaveSignatureRef.current = signature;
-      refreshProjectRecords();
+      const saved = saveProjectRecord(record);
+      if (saved) {
+        lastAutoSaveSignatureRef.current = signature;
+        refreshProjectRecords();
+      }
     }, intervalMs);
 
     return () => clearInterval(timer);
@@ -2720,6 +2732,8 @@ export default function CreativeBeadStudio() {
               </div>
 
               {/* 纹样滚动带 — 始终展示 */}
+            </div>
+            <div className="mx-auto max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
               <ScrollingPatternBand />
             </div>
           </section>
