@@ -30,7 +30,7 @@ type Props = {
 
 export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiConfigSaved }: Props) {
   const [apiConfig, setApiConfig] = useState(() =>
-    loadApiConfig() ?? { textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "", visionModelApiKey: "", visionModelName: "", autoSaveIntervalSeconds: DEFAULT_AUTO_SAVE_INTERVAL_SECONDS }
+    loadApiConfig() ?? { textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "", visionModelApiKey: "", visionModelName: "", autoSaveIntervalSeconds: DEFAULT_AUTO_SAVE_INTERVAL_SECONDS, useDefaultModel: true }
   );
   const [saved, setSaved] = useState(false);
   const [showTextKey, setShowTextKey] = useState(false);
@@ -198,9 +198,9 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
 
   const confirmLogout = useCallback(() => {
     logoutUser();
-    saveApiConfig({ textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "", visionModelApiKey: "", visionModelName: "", autoSaveIntervalSeconds: DEFAULT_AUTO_SAVE_INTERVAL_SECONDS });
+    saveApiConfig({ textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "", visionModelApiKey: "", visionModelName: "", autoSaveIntervalSeconds: DEFAULT_AUTO_SAVE_INTERVAL_SECONDS, useDefaultModel: true });
     setProfile({ nickname: "豆韵用户", avatarUrl: "", createdAt: Date.now() });
-    setApiConfig({ textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "", visionModelApiKey: "", visionModelName: "", autoSaveIntervalSeconds: DEFAULT_AUTO_SAVE_INTERVAL_SECONDS });
+    setApiConfig({ textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "", visionModelApiKey: "", visionModelName: "", autoSaveIntervalSeconds: DEFAULT_AUTO_SAVE_INTERVAL_SECONDS, useDefaultModel: true });
     setHistory(loadProjectHistory());
     setSelectedIds(new Set());
     setBatchMode(false);

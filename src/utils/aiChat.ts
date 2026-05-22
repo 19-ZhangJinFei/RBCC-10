@@ -81,6 +81,10 @@ export async function checkServerEnvConfig(): Promise<boolean> {
 
 export function isApiConfigured(): boolean {
   const config = loadApiConfig();
+  if (!config) {
+    // No saved config -> default to server default mode
+    return serverEnvConfigured === true;
+  }
   if (config?.textModelApiKey || config?.imageModelApiKey) return true;
   if (config?.useDefaultModel) return serverEnvConfigured === true;
   if (serverEnvConfigured === true) return true;
@@ -89,22 +93,24 @@ export function isApiConfigured(): boolean {
 
 function buildRequestConfig() {
   const config = loadApiConfig();
-  return config?.useDefaultModel
-    ? { useDefaultModel: true }
-    : {
-        textModelApiKey: config?.textModelApiKey ?? "",
-        imageModelApiKey: config?.imageModelApiKey ?? "",
-        textModelName: config?.textModelName ?? "",
-        imageModelName: config?.imageModelName ?? "",
-      };
+  // No saved config or explicitly using default model -> use server env vars
+  if (!config || config?.useDefaultModel) {
+    return { useDefaultModel: true };
+  }
+  return {
+    textModelApiKey: config?.textModelApiKey ?? "",
+    imageModelApiKey: config?.imageModelApiKey ?? "",
+    textModelName: config?.textModelName ?? "",
+    imageModelName: config?.imageModelName ?? "",
+  };
 }
 
 async function assertConfigured(): Promise<void> {
   const config = loadApiConfig();
   const canUseServerDefault =
-    config?.useDefaultModel === true || serverEnvConfigured === true || await checkServerEnvConfig();
+    config?.useDefaultModel === true || !config || serverEnvConfigured === true || await checkServerEnvConfig();
 
-  if (!config && !canUseServerDefault) {
+  if (!canUseServerDefault) {
     throw new Error("请先在设置中配置 API 信息");
   }
 }
