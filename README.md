@@ -2,100 +2,114 @@
   <img src="public/logo.jpg" alt="豆韵 Logo" width="120" />
   <h1>豆韵 DouYun</h1>
   <p><strong>传统文化 x 新潮手工拼豆的 AI 图纸生成网站</strong></p>
-  <p>
-    <a href="https://douyun-huazhang-3g29.vercel.app/">访问在线网站</a>
-    ·
-    <a href="https://douyun-huazhang-3g29.vercel.app/">https://douyun-huazhang-3g29.vercel.app/</a>
-  </p>
 </div>
 
-![豆韵首页截图](mainpage.png)
+## 网站链接
+
+| 网站 | 网址 |
+|---|---|
+| 豆韵 DouYun 在线体验 | [https://douyun-huazhang-3g29.vercel.app/](https://douyun-huazhang-3g29.vercel.app/) |
 
 豆韵是一个面向中华传统文化主题的拼豆图纸生成网站。项目将传统纹样、民俗意象、文学典故、器物审美和当下流行的手工拼豆创作结合起来，让用户可以从文化主题出发，通过 AI 生成图案或上传本地图片，再转化为可实际制作的拼豆图纸、材料清单和制作方案。它不是单纯的图片转像素工具，而是一套覆盖选题、生成、识别、再创作、像素化、配色映射、用量统计、保存、分享和导出的完整创作流程。
 
+## 首页预览
+
+<img src="docs/images/pages/home-page.png" alt="豆韵首页" width="100%" />
+
+首页预览展示了网站的整体视觉方向：品牌标题、导航入口、传统文化参考图、创作流程说明和社区入口共同构成第一屏体验。README 将首页截图单独放在网站链接之后，是为了让读者先看到实际产品界面，再继续阅读设计理念和功能说明。截图文件已从根目录归纳到 `docs/images/pages/home-page.png`，并使用英文文件名，避免在不同系统、部署平台或 Markdown 渲染器中出现中文路径兼容问题。
+
 ## 参考图展示
 
-| 敦煌飞天 | 青花莲纹 | 故宫龙纹 | 传统瑞兽 |
-|---|---|---|---|
-| ![敦煌飞天杯垫](public/showcase/feitian-coaster-draft.png) | ![莲花杯垫](public/showcase/lotus-coaster-draft.png) | ![故宫龙纹底稿](public/showcase/forbidden-city-dragon-draft.png) | ![瑞兽杯垫](public/showcase/auspicious-beast-coaster-draft.png) |
+<table>
+  <tr>
+    <td align="center" width="25%"><strong>敦煌飞天</strong><br /><img src="public/showcase/feitian-coaster-draft.png" alt="敦煌飞天杯垫" width="180" height="180" /></td>
+    <td align="center" width="25%"><strong>青花莲纹</strong><br /><img src="public/showcase/lotus-coaster-draft.png" alt="莲花杯垫" width="180" height="180" /></td>
+    <td align="center" width="25%"><strong>故宫龙纹</strong><br /><img src="public/showcase/forbidden-city-dragon-draft.png" alt="故宫龙纹底稿" width="180" height="180" /></td>
+    <td align="center" width="25%"><strong>传统瑞兽</strong><br /><img src="public/showcase/auspicious-beast-coaster-draft.png" alt="瑞兽杯垫" width="180" height="180" /></td>
+  </tr>
+  <tr>
+    <td align="center" width="25%"><strong>月兔纹样</strong><br /><img src="public/showcase/moon-rabbit-coaster-draft.png" alt="月兔杯垫" width="180" height="180" /></td>
+    <td align="center" width="25%"><strong>汝窑冰裂</strong><br /><img src="public/showcase/ru-kiln-crackle-magnet-draft.png" alt="汝窑冰裂纹冰箱贴" width="180" height="180" /></td>
+    <td align="center" width="25%"><strong>竹影杯垫</strong><br /><img src="public/showcase/bamboo-shadow-coaster-draft.png" alt="竹影杯垫" width="180" height="180" /></td>
+    <td align="center" width="25%"><strong>凤凰纹样</strong><br /><img src="public/showcase/phoenix-coaster-draft.png" alt="凤凰杯垫" width="180" height="180" /></td>
+  </tr>
+</table>
 
-| 月兔纹样 | 汝窑冰裂 | 竹影杯垫 | 凤凰纹样 |
-|---|---|---|---|
-| ![月兔杯垫](public/showcase/moon-rabbit-coaster-draft.png) | ![汝窑冰裂纹冰箱贴](public/showcase/ru-kiln-crackle-magnet-draft.png) | ![竹影杯垫](public/showcase/bamboo-shadow-coaster-draft.png) | ![凤凰杯垫](public/showcase/phoenix-coaster-draft.png) |
-
-这些参考图来自项目内置的 `public/showcase` 资源库，覆盖敦煌、青花、宫廷纹样、瑞兽、节令、瓷器和自然意象等方向。README 中加入配图的目的，是让读者在阅读功能说明之前先直观看到网站希望生成的作品气质：图案需要保留传统文化的识别点，同时又要被控制在拼豆可制作的颗粒尺度、颜色数量和边缘结构之内。后续首页滚动图、步骤图和论坛模板也围绕这些素材组织，便于用户从示例直接理解创作路径。
+参考图展示采用一致的四列结构和统一图片宽度，便于在 README 中形成整齐的视觉浏览区。这里展示的是项目内置 `public/showcase` 资源，覆盖敦煌、青花、宫廷纹样、瑞兽、节令、瓷器和自然意象等方向。它们用于说明豆韵希望生成的作品气质：图案既要保留传统文化的识别点，也要被控制在拼豆可制作的颗粒尺度、颜色数量和边缘结构之内，避免只追求复杂绘画效果而无法落地制作。
 
 ## 设计理念
-
-![传统貔貅图案](public/showcase/traditional-pixiu-beast.png)
 
 拼豆是一种低门槛、强参与感、适合亲子、社群、研学和文创场景的手工形式；传统文化纹样则具有高辨识度、强符号性和丰富的审美来源。豆韵的设计目标是把两者连接起来，把青花瓷、敦煌、京剧脸谱、山海经、二十四节气、故宫纹样、四大名著等文化资源转化为适合拼豆颗粒表达的图案。AI 在这里负责生成视觉素材、理解主体和组织文化说明，用户仍保留主题、主体、提示词、颜色、网格和图纸的调整权，最终结果服务于真实制作，而不是停留在屏幕预览。
 
 ## 页面组成与功能
 
-![故宫龙纹底稿](public/showcase/forbidden-city-dragon-draft.png)
-
 网站以首页、创作页、项目页、豆韵 AI、论坛、帮助页和个人主页构成完整产品闭环。首页负责建立品牌印象和示例入口；创作页承载核心制作流程；项目页沉淀个人作品；豆韵 AI 用于快速探索图像灵感；论坛用于分享与导入模板；帮助页解释操作和问题；个人主页集中管理用户身份、头像、模型配置和保存偏好。每个页面都围绕“从文化灵感到可制作图纸”展开，避免让用户在生成图片、整理材料和查找说明之间反复跳转。
 
 ### 首页
 
-![豆韵首页截图](mainpage.png)
+<img src="docs/images/pages/home-page.png" alt="首页页面截图" width="100%" />
 
 首页是整个网站的入口和视觉展示页。顶部导航包含首页、创作、项目、豆韵 AI、论坛、帮助和用户入口；首屏展示品牌标语、快速开始按钮和主要视觉图；滚动参考图展示 `public/showcase` 中的传统文化拼豆底稿；制作流程区用四个步骤说明从文化主题到拼豆底稿的过程；论坛入口以多张参考图横向展示，引导进入作品分享页面。首页强调“看得懂、点得进、马上能创作”，因此视觉上优先呈现作品，而不是大段介绍文字。
 
 ### 创作页
 
-![汝窑冰裂纹冰箱贴](public/showcase/ru-kiln-crackle-magnet-draft.png)
-
 创作页是核心工作区，由配置、主体提取与 AI 再创作、拼豆图纸、制作方案四个步骤组成。用户可以从传统主题开始，也可以上传已有图片作为再创作模板；系统会在不同阶段提供图像生成、主体识别、颜色分析、像素化、材料统计和文化说明能力。这个页面的设计重点是让每一步的输入和输出都清晰可见，用户既能快速走完整个流程，也能在主体识别、提示词和颜色图纸上进行细致修改。
 
 #### 第一步：配置
+
+<img src="docs/images/pages/creation-config-page.png" alt="创作配置页截图" width="100%" />
 
 第一步用于确定作品的基础参数，包括传统文化主题、核心元素、文化叙述、作品形式、画面比例、网格尺寸、颜色上限、网格显示、杂点平滑和可用颜色范围。作品形式覆盖杯垫、挂件、冰箱贴、胸针、吊饰、随身牌等常见拼豆场景，内置主题覆盖敦煌文化、青花瓷、京剧脸谱、山海经、二十四节气、甲骨文、三星堆、宋代瓷器、汉服纹样、苗绣、壮锦、剪纸、皮影戏、景泰蓝、商周青铜器、故宫宫廷纹样、苏州园林、水墨山水、传统瑞兽、十二生肖、年画与春节、端午文化、中秋文化、中国茶文化、红楼梦、西游记、三国演义、水浒传、诗词书法等方向。
 
 #### 第二步：主体提取与 AI 再创作
 
-![茶山冰箱贴](public/showcase/tea-mountain-magnet-draft.png)
+<img src="docs/images/pages/creation-recreation-page.png" alt="主体提取与再创作页截图" width="100%" />
 
 第二步处理原始素材和文化风格再创作。上传图片后，系统默认把整张原图作为主体模板，避免主体未被选中导致无法识别；用户仍可以用选择、增加、减少、框选等工具修改主体区域。系统会统计主体颜色占比，并把这些颜色信息作为后续再创作的参考。AI 识别主体会返回主体名称、类别、视觉证据、置信度、备选项和视觉摘要，识别结果支持编辑；再创作提示词也会显示为可编辑文本框，用户修改后可以重新生成，使 AI 输出更贴近用户确认过的主体和色彩结构。
 
 #### 第三步：拼豆图纸
 
-![锦鲤杯垫图纸](public/showcase/jinli-coaster-pattern-draft.png)
+<img src="docs/images/pages/creation-pattern-page.png" alt="拼豆图纸页截图" width="100%" />
 
 第三步把再创作结果转成可制作的拼豆图纸。系统会将图像按网格尺寸像素化，使用开源色表映射到最近可用颜色，按颜色数量上限合并相近颜色，并对外部浅色背景做连通区域识别，标记为非主体区域。用户可以查看带色号、行列号和网格线的图纸，也可以点击颜色高亮同色格，便于实际摆豆。材料统计会展示每种颜色的用量和占比，减少制作时临时估算、反复数格和颜色混淆的问题。
 
 #### 第四步：制作方案
 
-![如意纹杯垫](public/showcase/ruyi-pattern-coaster-draft.png)
+<img src="docs/images/pages/creation-plan-page.png" alt="制作方案页截图" width="100%" />
 
 第四步输出最终制作资料，包括作品标题、拼豆图纸、无标注图、材料清单、文化说明、制作步骤、工具准备、熨烫建议、时间估算和成本估算。文化说明会读取图像、主体识别结果和材料颜色，尽量避免只套用第一步配置主题；AI 文化文案提示词同样可编辑，用户可以修改后重新生成。导出功能面向真实手工场景，支持下载带网格图纸 PNG、无标注 PNG、材料 CSV 和制作方案文本，方便课堂分发、社群活动和个人留档。
 
 ### 项目页
 
+<img src="docs/images/pages/projects-page.png" alt="项目页截图" width="100%" />
+
 项目页用于管理本地作品，支持自动保存、手动保存、搜索项目标题、筛选主题元素、继续编辑、删除和新建项目。项目数据使用浏览器本地存储和 IndexedDB 保存，能够容纳较大的图像 data URL，并区分登录用户与匿名用户的项目记录。这个页面解决的是“作品不会只做一次”的问题：用户可能需要暂停、回看、复制旧方案、重新调整颜色或导出不同版本，因此项目页提供了创作历史的组织能力。
 
 ### 豆韵 AI 页面
+
+<img src="docs/images/pages/douyun-ai-page.png" alt="豆韵 AI 页面截图" width="100%" />
 
 豆韵 AI 是独立的图像生成入口，适合在正式进入四步创作流程之前探索视觉灵感。用户可以输入生图提示词，服务端调用 Ark 图像生成接口，生成结果以聊天消息形式展示，历史消息保存在浏览器本地。它与创作页的区别在于更自由、更轻量：用户可以先尝试不同传统意象、构图和色彩方向，再把满意的图像作为后续拼豆图纸的素材来源，减少正式制作前的试错成本。
 
 ### 论坛页
 
-![凤凰杯垫](public/showcase/phoenix-coaster-draft.png)
+<img src="docs/images/pages/forum-page.png" alt="论坛页截图" width="100%" />
 
 论坛页用于作品分享和模板导入，展示内置模板和云端社区作品，支持按标题、主题、作者和元素搜索。用户可以发布当前作品到论坛，也可以点击作品查看大图、主题、元素、文化说明和推荐配色，并一键导入为自己的可编辑项目。论坛的价值不只是展示成品，还在于形成可复用的创作素材库：新用户可以从已有模板开始学习，熟练用户可以把自己的设计沉淀为其他人可继续改造的公共参考。
 
 ### 帮助页
 
+<img src="docs/images/pages/help-page.png" alt="帮助页截图" width="100%" />
+
 帮助页提供完整说明，覆盖设计目的、操作指南、常见问题、使用技巧、中英文内容切换、侧边目录和移动端快速导航。它面向第一次使用网站的用户，也面向课堂、社群和工作坊的组织者，因此说明需要同时解释“怎么点”“为什么这样做”和“遇到问题如何处理”。帮助页会把创作流程拆成可执行动作，减少用户在主体识别、图纸导出、颜色统计和模型配置上的理解成本。
 
 ### 个人主页
 
+<img src="docs/images/pages/profile-page.png" alt="个人主页截图" width="100%" />
+
 个人主页管理用户和配置，包括注册、登录、用户昵称、系统头像、上传头像、裁剪头像、API 配置、模型选择、自动保存间隔、用户技能等级、项目历史查看和作品管理。用户可以选择使用系统默认模型，也可以手动填写文本模型、图像模型和图像理解模型配置。这个页面把偏好设置集中在一起，避免创作过程中频繁打断；同时也让不同用户在同一浏览器中拥有相对独立的项目记录和 AI 配置。
 
 ## 关键工作流
-
-![兽面杯垫](public/showcase/beast-mask-coaster-draft.png)
 
 豆韵的关键工作流围绕三条路径展开：从主题直接生成图案、从本地图片上传再创作、从再创作结果生成拼豆图纸。三条路径共享同一套颜色映射、主体区域和材料统计逻辑，保证用户无论从哪个入口开始，最终都能进入可制作的图纸和方案输出。工作流设计强调可解释的中间结果：用户可以看到主体识别、提示词、图像结果、像素网格和材料用量，而不是只得到一个无法修改的最终图片。
 
@@ -178,10 +192,12 @@ src/
 public/
   showcase/                  # 首页和示例参考图
   logo.jpg                   # 品牌 logo
-mainpage.png                 # README 首页截图
+docs/
+  images/
+    pages/                   # README 页面截图，统一英文命名
 ```
 
-项目结构以 Next.js App Router 为核心，页面入口、API 路由、全局样式、核心组件、主题数据、产品模板、图像算法和存储封装各自分区。`CreativeBeadStudio.tsx` 承担主要页面视图和创作流程编排，`SubjectMaskEditor.tsx` 负责主体区域编辑，`culturePattern.ts` 和 `pixelation.ts` 负责拼豆图纸生成，`profileStorage.ts` 与 `communityForum.ts` 负责本地和社区数据。这样的结构便于继续扩展主题、模板、导出格式和模型接口。
+项目结构以 Next.js App Router 为核心，页面入口、API 路由、全局样式、核心组件、主题数据、产品模板、图像算法和存储封装各自分区。`CreativeBeadStudio.tsx` 承担主要页面视图和创作流程编排，`SubjectMaskEditor.tsx` 负责主体区域编辑，`culturePattern.ts` 和 `pixelation.ts` 负责拼豆图纸生成，`profileStorage.ts` 与 `communityForum.ts` 负责本地和社区数据。README 页面截图统一放入 `docs/images/pages`，避免根目录堆积展示资源。
 
 ## 环境变量
 
@@ -258,8 +274,6 @@ src/app/colorSystemMapping.json
 AI 图像生成、主体识别、文化再创作和文化说明都依赖服务端模型接口，因此部署环境需要提供 Ark API Key、基础地址和模型名称。没有配置模型时，页面结构、示例图、项目管理和部分本地交互仍可查看，但涉及实际生图和看图理解的功能无法完成。项目把模型配置集中在环境变量和个人主页中，是为了让本地开发、线上部署和不同用户自定义模型都能使用同一套前端流程，同时避免把密钥暴露在浏览器代码里。
 
 ## 当前适用场景
-
-![年画童子杯垫](public/showcase/new-year-child-coaster-draft.png)
 
 豆韵当前适用于传统文化主题拼豆创作、文创产品概念设计、中小学课程、博物馆教育、非遗研学、亲子手作、社群活动、兴趣工作坊，以及拼豆图纸算法和 AI 辅助设计的开源研究。它特别适合需要“讲清文化来源并做出实物”的场景：用户不仅能获得好看的图案，还能得到主体说明、文化寓意、材料清单和制作步骤。对于教学场景，教师可以用它快速生成不同主题模板；对于个人创作，用户可以把灵感转化为可执行的手工方案。
 
