@@ -294,6 +294,7 @@ const showcaseReferenceImages = [
   { src: "/showcase/jinli-coaster-pattern-draft.png", alt: "Jinli coaster pattern draft" },
   { src: "/showcase/bronze-drum-coaster-draft.png", alt: "Bronze drum coaster draft" },
   { src: "/showcase/tea-mountain-magnet-draft.png", alt: "Tea mountain magnet draft" },
+  { src: "/showcase/traditional-pixiu-beast.png", alt: "Traditional Pixiu beast" },
 ];
 
 const homeStepImages = [
