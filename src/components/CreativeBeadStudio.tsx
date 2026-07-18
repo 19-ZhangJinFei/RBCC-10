@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CultureExplanation from "@/components/CultureExplanation";
 import FilterDropdown from "@/components/FilterDropdown";
@@ -160,7 +161,7 @@ const navItems: { id: SiteView; zh: string; en: string }[] = [
   { id: "home", zh: "首页", en: "Home" },
   { id: "start", zh: "创作", en: "Create" },
   { id: "projects", zh: "项目", en: "Projects" },
-  { id: "ai", zh: "豆韵AI", en: "DouYun AI" },
+  { id: "ai", zh: "豆阁AI", en: "Doge AI" },
   { id: "community", zh: "论坛", en: "Forum" },
   { id: "faq", zh: "帮助", en: "Help" },
 ];
@@ -289,7 +290,7 @@ const showcase = [
 const communityTemplates: CommunityTemplate[] = showcase.map((item, index) => ({
   id: `template_${index}`,
   title: item.title,
-  author: ["青瓷手作", "敦煌拾色", "宫墙手作", "山海造物"][index] ?? "豆韵工坊",
+  author: ["青瓷手作", "敦煌拾色", "宫墙手作", "山海造物"][index] ?? "豆阁工坊",
   avatar: ["青", "敦", "宫", "山"][index] ?? "豆",
   createdAt: Date.UTC(2026, 4, 19 - index, 2, 0, 0),
   theme: item.theme,
@@ -420,12 +421,12 @@ const helpData: HelpSection[] = [
     icon: "目标",
     subs: [
       {
-        title: "豆韵现在解决什么问题？",
-        content: "豆韵当前不是单纯的图片转像素工具，而是一套围绕传统文化拼豆创作的完整工作流。用户可以从首页进入创作、项目、豆韵AI、论坛和帮助几个独立页面：创作用于完成主题配置、素材处理、图纸生成和制作方案；项目页集中管理最近设计并支持搜索、继续编辑、删除和新建；论坛页用于浏览示例和用户发布作品并导入模板；豆韵AI现在调用生图接口，输入提示词后直接输出图像。设计目的就是把文化主题、图像生成、主体识别、拼豆颜色映射、用量统计、项目保存和分享导入放在一个连续流程中，让用户既能快速得到可制作的拼豆图纸，也能保留人工调整空间。",
+        title: "豆阁现在解决什么问题？",
+        content: "豆阁当前不是单纯的图片转像素工具，而是一套围绕传统文化拼豆创作的完整工作流。用户可以从首页进入创作、项目、豆阁AI、论坛和帮助几个独立页面：创作用于完成主题配置、素材处理、图纸生成和制作方案；项目页集中管理最近设计并支持搜索、继续编辑、删除和新建；论坛页用于浏览示例和用户发布作品并导入模板；豆阁AI现在调用生图接口，输入提示词后直接输出图像。设计目的就是把文化主题、图像生成、主体识别、拼豆颜色映射、用量统计、项目保存和分享导入放在一个连续流程中，让用户既能快速得到可制作的拼豆图纸，也能保留人工调整空间。",
       },
       {
         title: "和普通拼豆或聊天工具有什么区别？",
-        content: "普通拼豆工具通常只负责把图片像素化，普通聊天工具只输出文字建议；豆韵当前实现把两者拆成更明确的功能边界。豆韵AI页面使用生图API，负责根据提示词生成图像，不再作为普通问答弹窗存在；创作流程中的主体识别会把图像理解结果排版为主体名称、类别、证据、置信度、备选项和视觉摘要，并允许用户手动修改；第二步再创作使用这些可编辑识别信息生成提示词，不再把原图直接传给AI；第四步文化说明则同时使用图像和识别信息。图纸阶段还支持点击某种颜色后让所有同色块呈现轻微立体强调效果，方便查找材料位置，这些都是面向实际制作而不是只做展示的功能。",
+        content: "普通拼豆工具通常只负责把图片像素化，普通聊天工具只输出文字建议；豆阁当前实现把两者拆成更明确的功能边界。豆阁AI页面使用生图API，负责根据提示词生成图像，不再作为普通问答弹窗存在；创作流程中的主体识别会把图像理解结果排版为主体名称、类别、证据、置信度、备选项和视觉摘要，并允许用户手动修改；第二步再创作使用这些可编辑识别信息生成提示词，不再把原图直接传给AI；第四步文化说明则同时使用图像和识别信息。图纸阶段还支持点击某种颜色后让所有同色块呈现轻微立体强调效果，方便查找材料位置，这些都是面向实际制作而不是只做展示的功能。",
       },
     ],
   },
@@ -436,7 +437,7 @@ const helpData: HelpSection[] = [
     subs: [
       {
         title: "如何从顶部导航进入正确页面？",
-        content: "顶部导航现在按实际功能拆分为首页、创作、项目、豆韵AI、论坛和帮助。当前所在页面会以醒目的酒红色块显示，避免和普通白色按钮混淆。要开始制作拼豆作品，应点击“创作”；要恢复或搜索已有设计，应点击“项目”；要单独用生图模型生成图片，应点击“豆韵AI”；要查看作品分享和示例模板，应进入“论坛”。首页只作为入口和功能概览，不承担具体编辑任务。这样设计的好处是每个页面职责清晰，用户不会把项目管理、AI生图、论坛导入和拼豆图纸编辑混在一个弹窗或个人主页里操作。",
+        content: "顶部导航现在按实际功能拆分为首页、创作、项目、豆阁AI、论坛和帮助。当前所在页面会以醒目的酒红色块显示，避免和普通白色按钮混淆。要开始制作拼豆作品，应点击“创作”；要恢复或搜索已有设计，应点击“项目”；要单独用生图模型生成图片，应点击“豆阁AI”；要查看作品分享和示例模板，应进入“论坛”。首页只作为入口和功能概览，不承担具体编辑任务。这样设计的好处是每个页面职责清晰，用户不会把项目管理、AI生图、论坛导入和拼豆图纸编辑混在一个弹窗或个人主页里操作。",
       },
       {
         title: "第一步配置需要填写哪些内容？",
@@ -458,8 +459,8 @@ const helpData: HelpSection[] = [
     icon: "素材",
     subs: [
       {
-        title: "豆韵AI现在如何生成图像？",
-        content: "豆韵AI现在作为顶部导航中的独立页面存在，不再是右下角悬浮标或弹窗。它的接口已改为调用Ark生图API，输入框提示为“输入生图提示词”，按钮为“生成图片”。发送后，服务端会取最近一条用户消息作为生图提示词，调用Ark的images/generations接口，并把返回的base64图片或URL作为助手消息展示在聊天区域中。历史消息会保存imageUrl，因此刷新后仍能看到已生成图像。这个页面适合先独立探索视觉概念，生成满意的图像后再回到创作流程中上传或使用，不再承担传统文化问答文本助手的职责。",
+        title: "豆阁AI现在如何生成图像？",
+        content: "豆阁AI现在作为顶部导航中的独立页面存在，不再是右下角悬浮标或弹窗。它的接口已改为调用Ark生图API，输入框提示为“输入生图提示词”，按钮为“生成图片”。发送后，服务端会取最近一条用户消息作为生图提示词，调用Ark的images/generations接口，并把返回的base64图片或URL作为助手消息展示在聊天区域中。历史消息会保存imageUrl，因此刷新后仍能看到已生成图像。这个页面适合先独立探索视觉概念，生成满意的图像后再回到创作流程中上传或使用，不再承担传统文化问答文本助手的职责。",
       },
       {
         title: "上传图片后主体识别怎样工作？",
@@ -475,7 +476,7 @@ const helpData: HelpSection[] = [
       },
       {
         title: "内置样例、AI生成图和上传图有什么差别？",
-        content: "内置样例用于快速体验完整流程，不依赖外部AI接口，适合测试网格、配色、用量统计和导出效果。豆韵AI页面生成的图像是独立生图结果，可以作为灵感或素材来源，但需要用户回到创作流程中继续处理。创作页中直接生成的文化图案会进入后续拼豆流程；上传图则会触发主体蒙版和图像理解识别，适合把已有照片、插画或图案转成可制作作品。三者最终都可以进入拼豆图纸生成，但进入第二步时的主体识别、是否需要手动修蒙版、是否传图片给AI等行为不同，使用前应根据素材来源选择合适路径。",
+        content: "内置样例用于快速体验完整流程，不依赖外部AI接口，适合测试网格、配色、用量统计和导出效果。豆阁AI页面生成的图像是独立生图结果，可以作为灵感或素材来源，但需要用户回到创作流程中继续处理。创作页中直接生成的文化图案会进入后续拼豆流程；上传图则会触发主体蒙版和图像理解识别，适合把已有照片、插画或图案转成可制作作品。三者最终都可以进入拼豆图纸生成，但进入第二步时的主体识别、是否需要手动修蒙版、是否传图片给AI等行为不同，使用前应根据素材来源选择合适路径。",
       },
     ],
   },
@@ -498,7 +499,7 @@ const helpData: HelpSection[] = [
       },
       {
         title: "色号体系和用量统计有什么作用？",
-        content: "豆韵使用开源中性色号体系来标记颜色，每个格子显示的色号来自颜色映射表，并对应一个标准RGB值。它不是某个商家的专属编号，而是方便用户在不同材料品牌之间做近似对照。用量统计会按颜色汇总总颗数、比例和用途说明，并可以导出CSV文件，用于采购、分装和制作前检查。由于实体拼豆不同品牌和批次可能存在轻微色差，建议在正式制作前用实际材料和屏幕颜色做一次对照。图纸、无标注图、材料清单和制作方案应配合使用：图纸负责摆放位置，CSV负责采购数量，方案负责时间和成本预估。",
+        content: "豆阁使用开源中性色号体系来标记颜色，每个格子显示的色号来自颜色映射表，并对应一个标准RGB值。它不是某个商家的专属编号，而是方便用户在不同材料品牌之间做近似对照。用量统计会按颜色汇总总颗数、比例和用途说明，并可以导出CSV文件，用于采购、分装和制作前检查。由于实体拼豆不同品牌和批次可能存在轻微色差，建议在正式制作前用实际材料和屏幕颜色做一次对照。图纸、无标注图、材料清单和制作方案应配合使用：图纸负责摆放位置，CSV负责采购数量，方案负责时间和成本预估。",
       },
     ],
   },
@@ -532,19 +533,19 @@ const helpData: HelpSection[] = [
     subs: [
       {
         title: "生成的图片刷新或切换页面后还能看到吗？",
-        content: "可以。豆韵AI生成的图像会自动保存在浏览器本地存储中，刷新页面或切换到其他页面再回来，历史消息中的图片仍然可以正常显示。需要注意：如果清理浏览器缓存或使用无痕模式，本地数据可能会被清除，建议将重要的生成结果截图保存或下载到电脑里。",
+        content: "可以。豆阁AI生成的图像会自动保存在浏览器本地存储中，刷新页面或切换到其他页面再回来，历史消息中的图片仍然可以正常显示。需要注意：如果清理浏览器缓存或使用无痕模式，本地数据可能会被清除，建议将重要的生成结果截图保存或下载到电脑里。",
       },
       {
         title: "生成图片速度很慢，是正常现象吗？",
         content: "生成图片通常比文字回复慢很多，这是正常现象。调用生图模型接口需要等待服务端处理，一般需要几秒到几十秒不等。页面出现“正在生成图像”时请耐心等待，不要重复点击发送按钮。如果长时间无响应，可以点击发送按钮（此时变为中断按钮）中断当前请求，然后重试。网络状况不佳或模型负载较高时，生成时间会更长。",
       },
       {
-        title: "如何把豆韵AI生成的图片导入到创作流程？",
-        content: "豆韵AI页面是一个独立的生图工具，生成的图片目前不会自动进入创作流程。如果你想用AI生成的图片制作拼豆图纸，可以把生成的图片截图或右键保存到本地，然后在创作流程第二步点击“上传图片”，将保存的图片上传后进行主体识别和拼豆图纸生成。",
+        title: "如何把豆阁AI生成的图片导入到创作流程？",
+        content: "豆阁AI页面是一个独立的生图工具，生成的图片目前不会自动进入创作流程。如果你想用AI生成的图片制作拼豆图纸，可以把生成的图片截图或右键保存到本地，然后在创作流程第二步点击“上传图片”，将保存的图片上传后进行主体识别和拼豆图纸生成。",
       },
       {
         title: "拼豆图纸上的颜色和实际买到的拼豆有色差怎么办？",
-        content: "豆韵使用开源中性色号体系标记颜色，每个色号对应一个标准RGB值，与实际品牌的拼豆颜色可能存在差异。建议在制作前先拿实物拼豆与屏幕颜色做一次对照。如果发现某个颜色偏差较大，可以在图纸步骤开启“点击编辑”模式，手动将该颜色格子替换为更接近实际材料的颜色。导出材料清单后，也可以在使用时根据实际颜色灵活调整。",
+        content: "豆阁使用开源中性色号体系标记颜色，每个色号对应一个标准RGB值，与实际品牌的拼豆颜色可能存在差异。建议在制作前先拿实物拼豆与屏幕颜色做一次对照。如果发现某个颜色偏差较大，可以在图纸步骤开启“点击编辑”模式，手动将该颜色格子替换为更接近实际材料的颜色。导出材料清单后，也可以在使用时根据实际颜色灵活调整。",
       },
       {
         title: "我的作品保存在哪里？换设备或清缓存会丢失吗？",
@@ -655,7 +656,7 @@ const helpDataEn: HelpSection[] = [
     title: "Purpose",
     icon: "Goal",
     subs: [
-      { title: "What does DouYun solve?", content: "DouYun is a complete workflow for traditional-culture bead art: choose a theme, generate or upload imagery, identify the subject, convert it to a bead pattern, count materials, save projects, and import community templates." },
+      { title: "What does Doge solve?", content: "Doge is a complete workflow for traditional-culture bead art: choose a theme, generate or upload imagery, identify the subject, convert it to a bead pattern, count materials, save projects, and import community templates." },
       { title: "How is it different from a normal pixel tool?", content: "It combines image generation, editable subject identification, cultural recreation, bead color mapping, material counting, project persistence, and community import in one workflow designed for real making." },
     ],
   },
@@ -673,7 +674,7 @@ const helpDataEn: HelpSection[] = [
     title: "Image and Extraction",
     icon: "Image",
     subs: [
-      { title: "How does DouYun AI generate images?", content: "DouYun AI is a separate image-generation page. Its generated image history is persisted locally so refreshes keep generated images visible." },
+      { title: "How does Doge AI generate images?", content: "Doge AI is a separate image-generation page. Its generated image history is persisted locally so refreshes keep generated images visible." },
       { title: "How does subject identification work?", content: "After upload, the browser creates a green subject mask. You can click, add, subtract, or box-select areas, then AI generates editable structured subject information." },
       { title: "Why does recreation use subject JSON?", content: "Recreation uses the confirmed subject identification rather than guessing from the original image again. This lets you correct the subject before AI creates the cultural pattern." },
     ],
@@ -702,7 +703,7 @@ const helpDataEn: HelpSection[] = [
     title: "FAQ",
     icon: "FAQ",
     subs: [
-      { title: "Will generated images remain after refresh?", content: "Yes. DouYun AI generated images are saved in local browser storage and remain visible after refresh unless browser data is cleared." },
+      { title: "Will generated images remain after refresh?", content: "Yes. Doge AI generated images are saved in local browser storage and remain visible after refresh unless browser data is cleared." },
       { title: "What if image generation is slow?", content: "Image generation can take several seconds or longer. Wait for the request to finish or stop it and retry if it stalls." },
       { title: "Where are my works saved?", content: "Projects and AI chat history are stored in the current browser. Export important PNG, CSV, and plan files for offline backup." },
     ],
@@ -1015,7 +1016,7 @@ function ScrollingPatternBand() {
 export default function CreativeBeadStudio() {
   const [language, setLanguage] = useState<AppLanguage>(() => loadAppLanguage());
   const ui = {
-    brand: language === "en" ? "DouYun" : "豆韵 | 传统纹样拼豆设计工具",
+    brand: language === "en" ? "Doge" : "豆阁",
     login: language === "en" ? "Log in" : "登录",
     register: language === "en" ? "Register" : "注册",
     newProject: language === "en" ? "New Project" : "新建项目",
@@ -1273,8 +1274,8 @@ export default function CreativeBeadStudio() {
   // 首页打字机动画状态
   const homeTypingLine1 = L("方寸之间，粒粒皆可触摸的东方诗篇", "An Eastern poem you can touch, bead by bead");
   const homeTypingLine2 = L(
-    "从传统纹样中拾取一片色彩，让古老的审美以新的温度落回掌心。豆韵以AI为笔，将文化意象织入像素网格——选题、生成、映射、成稿，每一步皆是对传统的再创作，也是献给手作时光的一封情书。",
-    "Pick a color from traditional patterns and bring old aesthetics back into your hands. DouYun uses AI to weave cultural imagery into pixel grids: choose a theme, generate imagery, map colors, and export a craft-ready pattern."
+    "从传统纹样中拾取一片色彩，让古老的审美以新的温度落回掌心。豆阁以AI为笔，将文化意象织入像素网格——选题、生成、映射、成稿，每一步皆是对传统的再创作，也是献给手作时光的一封情书。",
+    "Pick a color from traditional patterns and bring old aesthetics back into your hands. Doge uses AI to weave cultural imagery into pixel grids: choose a theme, generate imagery, map colors, and export a craft-ready pattern."
   );
   const [typedLine1, setTypedLine1] = useState("");
   const [typedLine2, setTypedLine2] = useState("");
@@ -2904,7 +2905,7 @@ export default function CreativeBeadStudio() {
     try {
       await publishCommunityPost({
         record,
-        author: currentUser?.nickname ?? L("豆韵用户", "DouYun User"),
+        author: currentUser?.nickname ?? L("豆阁用户", "Doge User"),
         avatar: currentUser?.avatarUrl ?? "",
         colors: forcedColors,
       });
@@ -3081,7 +3082,16 @@ export default function CreativeBeadStudio() {
         <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* 左侧 Logo + 品牌文字 */}
           <button type="button" onClick={() => setView("home")} className="flex shrink-0 items-center gap-3">
-            <img src="/logo.jpg" alt={language === "en" ? "DouYun" : "豆韵"} className="h-11 w-11 rounded-md object-cover" />
+            <span className="relative h-12 w-12 overflow-hidden rounded-md">
+              <Image
+                src="/logo.png"
+                alt={language === "en" ? "Doge" : "豆阁"}
+                fill
+                priority
+                sizes="48px"
+                className="scale-[1.45] object-contain"
+              />
+            </span>
             <span className="hidden text-lg font-semibold text-stone-800 sm:inline">{ui.brand}</span>
           </button>
 
@@ -3344,7 +3354,7 @@ export default function CreativeBeadStudio() {
       {view === "ai" && (
         <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
           <div className="mb-6">
-            <p className="text-sm font-semibold text-[#8f1d21]">DouYun AI</p>
+            <p className="text-sm font-semibold text-[#8f1d21]">Doge AI</p>
             <h1 className="mt-2 text-4xl font-semibold tracking-tight text-stone-950">{ui.aiTitle}</h1>
           </div>
           <AiChatPanel embedded resetToken={aiChatResetToken} language={language} />
@@ -3562,7 +3572,7 @@ export default function CreativeBeadStudio() {
           {/* 右侧内容区域 */}
           <div className="min-w-0 flex-1 lg:pl-8">
             <p className="text-sm font-semibold text-[#8f1d21]">{L("创作指南", "Creation Guide")}</p>
-            <h1 className="mt-2 text-4xl font-semibold tracking-tight">{L("豆韵 · 帮助", "DouYun · Help")}</h1>
+            <h1 className="mt-2 text-4xl font-semibold tracking-tight">{L("豆阁 · 帮助", "Doge · Help")}</h1>
 
             {/* 移动端顶部快速导航 */}
             <div className="mt-4 flex flex-wrap gap-2 lg:hidden">
@@ -3765,7 +3775,7 @@ export default function CreativeBeadStudio() {
       <footer className="border-t border-stone-200 bg-[#fffdf7]">
         <div className="mx-auto flex max-w-7xl flex-col items-center gap-1 px-4 py-6 text-center sm:px-6 lg:px-8">
           <p className="text-xs text-stone-400">
-            &copy; {new Date().getFullYear()} {L("豆韵 DouYun — 拼豆图纸生成工具", "DouYun - Bead Pattern Design Tool")}
+            &copy; {new Date().getFullYear()} {L("豆阁 Doge — 拼豆图纸生成工具", "Doge - Bead Pattern Design Tool")}
           </p>
           <p className="text-xs text-stone-400">
             {L("基于 Apache 2.0 开源协议 · 以 AI 为笔，让千年纹样织入像素网格", "Apache 2.0 licensed · Weaving heritage patterns into pixel grids with AI")}

@@ -86,8 +86,8 @@ export function getDefaultChatMessages(language: AppLanguage = loadAppLanguage()
     {
       role: "assistant",
       content: language === "en"
-        ? "Hi, I am DouYun AI. Switch between text chat and image generation as needed."
-        : "你好，我是豆韵AI。可以切换到“文字对话”或“生图模式”分别使用。",
+        ? "Hi, I am Doge AI. Switch between text chat and image generation as needed."
+        : "你好，我是豆阁AI。可以切换到“文字对话”或“生图模式”分别使用。",
     },
   ];
 }
@@ -287,12 +287,12 @@ export async function streamChatMessage(
 
   const result = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(result?.error ?? `豆韵AI${mode === "image" ? "生图" : "对话"}请求失败`);
+    throw new Error(result?.error ?? `豆阁AI${mode === "image" ? "生图" : "对话"}请求失败`);
   }
 
   if (mode === "image") {
     if (typeof result?.imageUrl !== "string" || result.imageUrl.length === 0) {
-      throw new Error(result?.error ?? "豆韵AI 未返回图片");
+      throw new Error(result?.error ?? "豆阁AI 未返回图片");
     }
     onDelta("已生成图像：");
     onImage?.(result.imageUrl);
@@ -300,7 +300,7 @@ export async function streamChatMessage(
   }
 
   if (typeof result?.content !== "string" || result.content.trim().length === 0) {
-    throw new Error(result?.error ?? "豆韵AI 未返回文本内容");
+    throw new Error(result?.error ?? "豆阁AI 未返回文本内容");
   }
 
   onDelta(result.content);

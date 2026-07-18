@@ -132,7 +132,7 @@ async function handleTextChat(messages: unknown, config: RequestConfig | undefin
       messages: [
         {
           role: "system",
-          content: `你是豆韵AI助手。优先直接回答用户问题，保持简洁、准确；只有当用户明确要求生成图片时才建议切换到生图模式。${getLanguageInstruction(language)}`,
+          content: `你是豆阁AI助手。优先直接回答用户问题，保持简洁、准确；只有当用户明确要求生成图片时才建议切换到生图模式。${getLanguageInstruction(language)}`,
         },
         ...normalizedMessages,
       ],
@@ -145,7 +145,7 @@ async function handleTextChat(messages: unknown, config: RequestConfig | undefin
       {
         error: formatUpstreamError(
           detail,
-          localizedError(language, "豆韵AI 对话请求失败", "DouYun AI chat request failed"),
+          localizedError(language, "豆阁AI 对话请求失败", "Doge AI chat request failed"),
         ),
         detail,
       },
@@ -157,7 +157,7 @@ async function handleTextChat(messages: unknown, config: RequestConfig | undefin
   const content = extractAssistantText(result?.choices?.[0]?.message?.content);
   if (!content) {
     return NextResponse.json({
-      error: localizedError(language, "豆韵AI 对话接口未返回文本内容。", "DouYun AI did not return text content."),
+      error: localizedError(language, "豆阁AI 对话接口未返回文本内容。", "Doge AI did not return text content."),
     }, { status: 502 });
   }
 
@@ -216,7 +216,7 @@ async function handleImageGeneration(messages: unknown, config: RequestConfig | 
       {
         error: formatUpstreamError(
           detail,
-          localizedError(language, "豆韵AI 生图请求失败", "DouYun AI image generation request failed"),
+          localizedError(language, "豆阁AI 生图请求失败", "Doge AI image generation request failed"),
         ),
         detail,
       },
@@ -229,7 +229,7 @@ async function handleImageGeneration(messages: unknown, config: RequestConfig | 
   const url = result?.data?.[0]?.url;
   if (!base64 && !url) {
     return NextResponse.json({
-      error: localizedError(language, "豆韵AI 生图接口未返回图片数据。", "DouYun AI did not return image data."),
+      error: localizedError(language, "豆阁AI 生图接口未返回图片数据。", "Doge AI did not return image data."),
     }, { status: 502 });
   }
 

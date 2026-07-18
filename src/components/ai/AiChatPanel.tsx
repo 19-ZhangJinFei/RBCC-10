@@ -82,11 +82,11 @@ let pendingAbortController: AbortController | null = null;
 
 export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, embedded = false, language = "zh" }: Props) {
   const ui = useMemo(() => ({
-    title: "豆韵AI",
-    apiWarning: language === "en" ? "API is not configured. DouYun AI is unavailable." : "未配置 API，暂时无法使用豆韵AI。",
+    title: "豆阁AI",
+    apiWarning: language === "en" ? "API is not configured. Doge AI is unavailable." : "未配置 API，暂时无法使用豆阁AI。",
     gotIt: language === "en" ? "Got it" : "知道了",
     close: language === "en" ? "Close" : "关闭",
-    imageAlt: language === "en" ? "DouYun AI generated image" : "豆韵AI生成图像",
+    imageAlt: language === "en" ? "Doge AI generated image" : "豆阁AI生成图像",
     textMode: language === "en" ? "Text Chat" : "文字对话",
     imageMode: language === "en" ? "Image Mode" : "生图模式",
     configureApi: language === "en" ? "Configure an API key in settings first..." : "请先在设置中配置 API Key...",
