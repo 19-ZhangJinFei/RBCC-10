@@ -1,0 +1,61 @@
+name: Deploy to Alibaba Cloud ECS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-ecs-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and restart DouYun
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Configure SSH
+        env:
+          ECS_HOST: ${{ secrets.ECS_HOST }}
+          ECS_SSH_KEY: ${{ secrets.ECS_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$ECS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$ECS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy main to ECS
+        env:
+          ECS_HOST: ${{ secrets.ECS_HOST }}
+          ECS_USER: ${{ secrets.ECS_USER }}
+        run: |
+          ssh -o BatchMode=yes "$ECS_USER@$ECS_HOST" 'bash -se' <<'REMOTE'
+            set -euo pipefail
+            cd /home/ecs-user/douyun
+
+            git fetch origin main
+            git checkout main
+            git pull --ff-only origin main
+            npm ci
+            npm run build
+
+            sudo /usr/bin/systemctl restart douyun.service
+
+            for attempt in {1..20}; do
+              if curl --fail --silent --show-error http://127.0.0.1:3000/api/env-config > /dev/null; then
+                echo "Deployment health check passed."
+                exit 0
+              fi
+              sleep 1
+            done
+
+            sudo /usr/bin/systemctl status douyun.service --no-pager
+            echo "Deployment health check failed."
+            exit 1
+          REMOTE
