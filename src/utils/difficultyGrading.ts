@@ -70,7 +70,7 @@ export function computeDifficultyStats(grid: MappedPixel[][]): DifficultyStats {
  */
 export function mergeSmallRegions(grid: MappedPixel[][], minRegionSize: number): MappedPixel[][] {
   if (minRegionSize <= 1) return grid; // 不需要合并
-  let work = normalize(grid).map((row) => row.map((cell) => (cell ? { ...cell } : cell)));
+  const work = normalize(grid).map((row) => row.map((cell) => (cell ? { ...cell } : cell)));
   const M = work.length;
   const N = work[0]?.length ?? 0;
 

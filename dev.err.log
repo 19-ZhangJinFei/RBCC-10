@@ -1,6 +1,0 @@
- ⚠ Found lockfile missing swc dependencies, patching...
- ⚠ Found lockfile missing swc dependencies, patching...
- ⨯ Failed to patch lockfile, please try uninstalling and reinstalling next in this workspace
-[TypeError: Cannot read properties of undefined (reading 'os')]
- ⨯ Failed to patch lockfile, please try uninstalling and reinstalling next in this workspace
-[TypeError: Cannot read properties of undefined (reading 'os')]
