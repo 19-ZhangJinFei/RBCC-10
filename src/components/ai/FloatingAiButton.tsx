@@ -137,7 +137,7 @@ export default function FloatingAiButton({ onClick }: Props) {
             top: position.y - 56,
           }}
         >
-          ⚠️ 未配置API，暂时无法使用豆韵助手
+          ⚠️ 未配置API，暂时无法使用豆阁助手
         </div>
       )}
       <button
@@ -152,7 +152,7 @@ export default function FloatingAiButton({ onClick }: Props) {
           top: position.y,
           touchAction: "none",
         }}
-        title="豆韵助手 - 问答传统文化与拼豆知识"
+        title="豆阁助手 - 问答传统文化与拼豆知识"
       >
         🤖
       </button>

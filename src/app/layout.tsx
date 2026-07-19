@@ -1,4 +1,4 @@
-﻿import type { Metadata, Viewport } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import AppAnalytics from "@/components/AppAnalytics";
 import "./globals.css";
@@ -14,19 +14,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "豆韵 | 传统纹样拼豆设计工具",
+  title: "豆阁",
   description: "以AI为笔，将千年纹样织入像素网格，化作可供触摸的豆粒诗篇。",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "豆韵",
+    title: "豆阁",
   },
   icons: {
     icon: [
-      { url: "/logo.jpg", type: "image/jpeg" },
+      { url: "/logo.png", type: "image/png" },
     ],
-    apple: [{ url: "/logo.jpg", type: "image/jpeg" }],
+    apple: [{ url: "/logo.png", type: "image/png" }],
   },
 };
 

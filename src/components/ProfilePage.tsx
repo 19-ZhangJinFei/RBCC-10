@@ -103,7 +103,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
     loginRegister: language === "en" ? "Log in / Register" : "登录 / 注册",
     deleteConfirm: language === "en" ? "Delete the selected project records? This cannot be undone." : "确定删除选中的作品记录？此操作不可撤销。",
     defaultWork: language === "en" ? "Work" : "作品",
-    defaultDouyunWork: language === "en" ? "DouYun Work" : "豆韵作品",
+    defaultDouyunWork: language === "en" ? "Doge Work" : "豆阁作品",
     patternPng: language === "en" ? "Pattern PNG" : "拼豆图纸",
     previewPng: language === "en" ? "Preview PNG" : "场景预览",
     csvAlert: language === "en" ? "Open the work and download the usage CSV from the bead pattern step." : "请进入作品后，在「拼豆图纸」步骤下载用量 CSV。",
@@ -157,7 +157,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
   const [showVisionKey, setShowVisionKey] = useState(false);
   const [envConfig, setEnvConfig] = useState<EnvConfig | null>(() => cachedEnvConfig);
   const [envLoading, setEnvLoading] = useState(false);
-  const [profile, setProfile] = useState<StoredUser>(() => loadCurrentUserProfile() ?? { nickname: "豆韵用户", avatarUrl: "", createdAt: Date.now(), skillLevel: loadUserSkillLevel() });
+  const [profile, setProfile] = useState<StoredUser>(() => loadCurrentUserProfile() ?? { nickname: "豆阁用户", avatarUrl: "", createdAt: Date.now(), skillLevel: loadUserSkillLevel() });
   const [nicknameEditing, setNicknameEditing] = useState(false);
   const [nicknameDraft, setNicknameDraft] = useState(profile.nickname);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -373,7 +373,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
   const confirmLogout = useCallback(() => {
     logoutUser();
     saveApiConfig({ textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "", visionModelApiKey: "", visionModelName: "", autoSaveIntervalSeconds: DEFAULT_AUTO_SAVE_INTERVAL_SECONDS, useDefaultModel: true });
-    setProfile({ nickname: "豆韵用户", avatarUrl: "", createdAt: Date.now(), skillLevel: loadUserSkillLevel() });
+    setProfile({ nickname: "豆阁用户", avatarUrl: "", createdAt: Date.now(), skillLevel: loadUserSkillLevel() });
     setApiConfig({ textModelApiKey: "", textModelName: "", imageModelApiKey: "", imageModelName: "", visionModelApiKey: "", visionModelName: "", autoSaveIntervalSeconds: DEFAULT_AUTO_SAVE_INTERVAL_SECONDS, useDefaultModel: true });
     void refreshHistory();
     setSelectedIds(new Set());
