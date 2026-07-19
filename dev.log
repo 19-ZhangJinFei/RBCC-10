@@ -1,0 +1,34 @@
+   ▲ Next.js 15.3.6
+   - Local:        http://localhost:3000
+   - Network:      http://10.144.219.31:3000
+
+ ✓ Starting...
+ ✓ Ready in 7.8s
+ ○ Compiling / ...
+ ✓ Compiled / in 3.7s (761 modules)
+ GET / 200 in 4490ms
+ ✓ Compiled in 759ms (351 modules)
+ GET / 200 in 167ms
+ ✓ Compiled /api/community-posts in 423ms (768 modules)
+ GET /api/community-posts 200 in 570ms
+ ✓ Compiled in 825ms (762 modules)
+ GET / 200 in 218ms
+ ✓ Compiled /api/community-posts in 133ms (430 modules)
+ GET /api/community-posts 200 in 260ms
+ GET /api/community-posts 200 in 264ms
+ ✓ Compiled in 684ms (782 modules)
+ GET / 200 in 115ms
+ ✓ Compiled in 1522ms (762 modules)
+ GET / 200 in 210ms
+ ✓ Compiled in 1139ms (762 modules)
+ GET / 200 in 154ms
+ GET / 200 in 176ms
+ ✓ Compiled in 876ms (762 modules)
+ GET / 200 in 149ms
+ GET / 200 in 172ms
+ GET / 200 in 88ms
+ ✓ Compiled /api/community-posts in 183ms (430 modules)
+ GET /api/community-posts 200 in 299ms
+ ✓ Compiled /api/generate-culture-image in 453ms (768 modules)
+ POST /api/generate-culture-image 500 in 519ms
+ ✓ Compiled in 1620ms (352 modules)

@@ -18,6 +18,9 @@ import { type AspectRatioId, aspectRatios } from "@/data/aspectRatios";
 import { cultureThemes } from "@/data/cultureThemes";
 import { getProductTemplate } from "@/data/productTemplates";
 import { countBeads, type BeadCount } from "@/utils/countBeads";
+import { buildKit, type Kit } from "@/utils/buildKit";
+import { LEVEL_SPECS, simplifyToLevel, type DifficultyStats } from "@/utils/difficultyGrading";
+import type { MappedPixel } from "@/utils/pixelation";
 import {
   imageDataUrlToPattern,
   renderPatternToCanvas,
@@ -740,6 +743,26 @@ function downloadBeadCsv(items: BeadCount[], filename: string): void {
   downloadUrl(URL.createObjectURL(blob), filename);
 }
 
+function downloadKitCsv(kit: Kit, filename: string): void {
+  const header = ["\u8272\u53F7", "RGB", "\u9700\u8981\u9897\u6570", "\u4E70\u51E0\u5305", "\u5355\u4EF7(\u5143/\u5305)", "\u5C0F\u8BA1(\u5143)", "\u7528\u9014", "\u6DD8\u5B9D\u94FE\u63A5"];
+  const rows = kit.items.map((item) => [
+    item.colorCode,
+    item.rgb,
+    String(item.count),
+    String(item.packs),
+    String(item.pricePerPack),
+    String(item.subtotal),
+    item.usage,
+    item.buyUrl,
+  ]);
+  const totalRow = ["\u5408\u8BA1", "", String(kit.totalBeads), String(kit.totalPacks), "", String(kit.totalPrice), "", ""];
+  const csv = [header, ...rows, totalRow]
+    .map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(","))
+    .join("\n");
+  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+  downloadUrl(URL.createObjectURL(blob), filename);
+}
+
 function downloadTextFile(content: string, filename: string): void {
   const blob = new Blob([`\uFEFF${content}`], { type: "text/plain;charset=utf-8" });
   downloadUrl(URL.createObjectURL(blob), filename);
@@ -1064,6 +1087,9 @@ export default function CreativeBeadStudio() {
   const [isPainting, setIsPainting] = useState(false);
   const [paintColor, setPaintColor] = useState<string>('#000000');
   const [paintColorKey, setPaintColorKey] = useState<string>('');
+  // 难度分级 L1–L5（智能简化）阶梯
+  const [ladder, setLadder] = useState<{ level: number; label: string; url: string; stats: DifficultyStats; grid: MappedPixel[][]; palette: string[]; width: number; height: number }[]>([]);
+  const [ladderLoading, setLadderLoading] = useState(false);
   const directOutputRef = useRef(false);
 
   const product = getProductTemplate(productId);
@@ -1095,6 +1121,34 @@ export default function CreativeBeadStudio() {
   const beadCounts = useMemo(
     () => (pattern ? countBeads(pattern.grid) : []),
     [pattern],
+  );
+
+  // 采购清单：把 BOM 换算成「买几包 / 花多少钱 / 淘宝链接」
+  const kit = useMemo(() => buildKit(beadCounts), [beadCounts]);
+
+  // 难度分级：把当前图纸智能简化成 L1–L5 五个版本（缩略图 + 指标），非破坏性预览
+  const generateLadder = useCallback(() => {
+    if (!pattern) return;
+    setLadderLoading(true);
+    try {
+      const items = LEVEL_SPECS.map((spec) => {
+        const res = simplifyToLevel(pattern.grid, spec.level);
+        const canvas = document.createElement("canvas");
+        renderPatternToCanvas(canvas, { ...pattern, grid: res.grid, palette: res.palette, width: res.width, height: res.height }, false);
+        return { level: spec.level, label: spec.label, url: canvas.toDataURL("image/png"), stats: res.stats, grid: res.grid, palette: res.palette, width: res.width, height: res.height };
+      });
+      setLadder(items);
+    } finally {
+      setLadderLoading(false);
+    }
+  }, [pattern]);
+
+  // 把某个难度档应用到当前图纸（人拍板）
+  const applyLadderLevel = useCallback(
+    (item: { grid: MappedPixel[][]; palette: string[]; width: number; height: number }) => {
+      setPattern((prev) => (prev ? { ...prev, grid: item.grid, palette: item.palette, width: item.width, height: item.height } : prev));
+    },
+    [],
   );
 
   const forcedColorWarning = useMemo(() => {
@@ -2584,6 +2638,81 @@ export default function CreativeBeadStudio() {
               </div>
 
               <div className="rounded-lg border border-stone-200 bg-white p-5">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <h3 className="text-lg font-semibold">{L("采购清单（含淘宝购买）", "Shopping List (Taobao)")}</h3>
+                  <button type="button" disabled={kit.items.length === 0} onClick={() => downloadKitCsv(kit, `${workTitle}-${language === "en" ? "shopping-list" : "采购清单"}.csv`)} className="rounded-md border border-[#8f1d21] px-3 py-1.5 text-xs font-semibold text-[#8f1d21] disabled:opacity-50">{L("导出采购清单 CSV", "Export Shopping List CSV")}</button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-stone-200 text-xs text-stone-500">
+                        <th className="py-1 pr-3">{L("色号", "Code")}</th>
+                        <th className="py-1 pr-3">{L("颗数", "Beads")}</th>
+                        <th className="py-1 pr-3">{L("包数", "Packs")}</th>
+                        <th className="py-1 pr-3">{L("单价", "Price")}</th>
+                        <th className="py-1 pr-3">{L("小计", "Subtotal")}</th>
+                        <th className="py-1">{L("购买", "Buy")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {kit.items.map((item) => (
+                        <tr key={`${item.colorCode}-${item.rgb}`} className="border-b border-stone-100">
+                          <td className="py-1.5 pr-3">
+                            <span className="inline-flex items-center gap-1.5">
+                              <span className="inline-block h-3 w-3 rounded-sm border border-stone-300" style={{ backgroundColor: item.rgb }} />
+                              {item.colorCode}
+                            </span>
+                          </td>
+                          <td className="py-1.5 pr-3">{item.count}</td>
+                          <td className="py-1.5 pr-3">{item.packs}</td>
+                          <td className="py-1.5 pr-3">{item.pricePerPack}</td>
+                          <td className="py-1.5 pr-3">{item.subtotal}</td>
+                          <td className="py-1.5"><a href={item.buyUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-[#8f1d21] underline">{L("淘宝购买", "Taobao")}</a></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="font-semibold">
+                        <td className="py-2 pr-3">{L("合计", "Total")}</td>
+                        <td className="py-2 pr-3">{kit.totalBeads}</td>
+                        <td className="py-2 pr-3">{kit.totalPacks}</td>
+                        <td className="py-2 pr-3" />
+                        <td className="py-2 pr-3">≈{kit.totalPrice} {L("元", "RMB")}</td>
+                        <td className="py-2" />
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                <p className="mt-2 text-xs text-stone-400">{L("单价 / 每包颗数 / 损耗为示例值，商科按淘宝实际数据填入 config/kitConfig.ts；未配置的色号自动跳转淘宝搜索。", "Price / pack size / waste are sample values; fill real Taobao data in config/kitConfig.ts. Unmapped codes link to Taobao search.")}</p>
+              </div>
+
+              <div className="rounded-lg border border-stone-200 bg-white p-5">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold">{L("难度分级 L1–L5（智能简化）", "Difficulty Ladder L1–L5")}</h3>
+                    <p className="mt-1 text-xs text-stone-500">{L("同一张图自动生成 5 个难度：感知减色 + 结构保持的碎块合并——越低越好拼，越高越精细。", "Auto-generate 5 versions: perceptual color reduction + structure-preserving region merge.")}</p>
+                  </div>
+                  <button type="button" disabled={!pattern || ladderLoading} onClick={generateLadder} className="shrink-0 rounded-md bg-[#8f1d21] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{ladderLoading ? L("生成中...", "...") : L("生成难度阶梯", "Generate Ladder")}</button>
+                </div>
+                {ladder.length > 0 && (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                    {ladder.map((item) => (
+                      <div key={item.level} className="rounded-md border border-stone-200 p-2">
+                        <div className="mb-1 text-xs font-semibold">L{item.level} {item.label}</div>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={item.url} alt={`L${item.level}`} className="aspect-square w-full rounded border border-stone-100 object-contain" />
+                        <div className="mt-1 text-[11px] leading-4 text-stone-500">
+                          {L("色号", "colors")} {item.stats.colorKinds}｜{L("豆", "beads")} {item.stats.beadCount}<br />
+                          {L("碎块", "bits")} {item.stats.isolatedCount}
+                        </div>
+                        <button type="button" onClick={() => applyLadderLevel(item)} className="mt-1 w-full rounded border border-[#8f1d21] px-2 py-1 text-[11px] font-semibold text-[#8f1d21]">{L("用这档", "Use")}</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-lg border border-stone-200 bg-white p-5">
                 <h3 className="text-lg font-semibold">{L("工具选择", "Tools")}</h3>
                 <ul className="mt-3 space-y-2 text-sm leading-6 text-stone-600">
                   <li>{L("模板板：透明方形板更适合对照网格，尺寸需覆盖完整图纸。", "Pegboard: a transparent square board works best for checking the grid.")}</li>
@@ -2675,6 +2804,7 @@ export default function CreativeBeadStudio() {
               <button type="button" disabled={!patternUrl} onClick={() => patternUrl && downloadUrl(patternUrl, `${workTitle}-${language === "en" ? "bead-pattern" : "拼豆图纸"}.png`)} className="rounded-md bg-[#8f1d21] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{L("下载图纸 PNG", "Download Pattern PNG")}</button>
               <button type="button" disabled={!cleanPatternUrl} onClick={() => cleanPatternUrl && downloadUrl(cleanPatternUrl, `${workTitle}-${language === "en" ? "clean-pattern" : "无标注图纸"}.png`)} className="rounded-md bg-[#8f1d21] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{L("下载无标注 PNG", "Download Clean PNG")}</button>
               <button type="button" disabled={beadCounts.length === 0} onClick={() => downloadBeadCsv(beadCounts, `${workTitle}-${language === "en" ? "materials" : "材料清单"}.csv`)} className="rounded-md bg-[#8f1d21] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{L("导出材料 CSV", "Export Materials CSV")}</button>
+              <button type="button" disabled={kit.items.length === 0} onClick={() => downloadKitCsv(kit, `${workTitle}-${language === "en" ? "shopping-list" : "采购清单"}.csv`)} className="rounded-md bg-[#8f1d21] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{L("导出采购清单", "Export Shopping List")}</button>
               <button type="button" disabled={!pattern} onClick={() => downloadTextFile(planText, `${workTitle}-${language === "en" ? "making-plan" : "制作方案"}.txt`)} className="rounded-md bg-[#8f1d21] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{L("导出制作方案", "Export Making Plan")}</button>
             </div>
           </div>

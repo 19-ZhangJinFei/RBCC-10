@@ -39,7 +39,7 @@ const samplePaletteHints = ["#FFFFFF", "#1557A8", "#3677D2", "#CDE8FF", "#1C334D
  * 智能颜色合并：通过迭代合并最相似颜色来减少颜色数量，而非直接丢弃低频颜色。
  * 每次迭代找到最相似的两个颜色，将其中一个合并到另一个，从而最小化颜色失真。
  */
-function clampColorCount(grid: MappedPixel[][], maxColors: number, forcedHexColors: string[] = []): MappedPixel[][] {
+export function clampColorCount(grid: MappedPixel[][], maxColors: number, forcedHexColors: string[] = []): MappedPixel[][] {
   // 统计每种颜色的使用次数
   const colorCounts = new Map<string, number>();
   const colorCells = new Map<string, { key: string; color: string }>();
