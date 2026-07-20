@@ -304,7 +304,7 @@ const communityTemplates: CommunityTemplate[] = showcase.map((item, index) => ({
   title: item.title,
   author: ["金楼拾光", "碧江砖韵", "岭南筑影", "耕读工坊"][index] ?? "豆阁工坊",
   avatar: ["金", "砖", "镬", "耕"][index] ?? "豆",
-  createdAt: Date.UTC(2026, 4, 19 - index, 2, 0, 0),
+  createdAt: Date.UTC(2026, 6, 21 - index, 2, 0, 0),
   theme: item.theme,
   element: item.element,
   meaning: item.meaning,
