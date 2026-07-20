@@ -11,7 +11,8 @@ import AiChatPanel from "@/components/ai/AiChatPanel";
 import { clearAiChatHistory } from "@/utils/aiChat";
 import { deleteProjectRecord, loadActiveProjectId, loadProjectHistoryAsync, saveProjectRecord, loadCurrentUserProfile, loadApiConfig, DEFAULT_AUTO_SAVE_INTERVAL_SECONDS, normalizeAutoSaveIntervalSeconds, type StoredUser } from "@/utils/profileStorage";
 import { loadAppLanguage, saveAppLanguage, type AppLanguage } from "@/utils/language";
-import { fetchCommunityPosts, publishCommunityPost } from "@/utils/communityForum";
+import { SITE_VIEW_COOKIE_KEY, type SiteView } from "@/utils/siteView";
+import { COMMUNITY_POSTS_CHANGED_EVENT, deleteCommunityPost, fetchCommunityPosts, publishCommunityPost, updateCommunityPost } from "@/utils/communityForum";
 import type { ProjectRecord } from "@/types/projectTypes";
 import type { CommunityPost as CloudCommunityPost } from "@/types/community";
 import type { SubjectIdentification } from "@/types/subjectIdentification";
@@ -41,7 +42,6 @@ import {
   type ImageFilter,
 } from "@/utils/colorSystemUtils";
 
-type SiteView = "home" | "start" | "projects" | "ai" | "community" | "faq" | "profile";
 type StudioStep = "config" | "extract" | "pattern" | "preview";
 type ProductConfigDefault = {
   aspectRatio: AspectRatioId;
@@ -383,6 +383,15 @@ type CommunityTemplate = {
 type CommunityPost = CommunityTemplate & {
   type: "template" | "project";
   record?: ProjectRecord;
+  updatedAt?: number;
+  isOwnedByCurrentUser?: boolean;
+};
+
+type CommunityEditDraft = {
+  title: string;
+  theme: string;
+  element: string;
+  meaning: string;
 };
 
 const helpSidebarNav = [
@@ -560,7 +569,7 @@ const helpData: HelpSection[] = [
       },
       {
         title: "在论坛发布的作品别人能看到吗？如何管理已发布的作品？",
-        content: "在论坛发布作品后，其他用户可以在论坛页面看到你的作品卡片，包括预览图、主题、元素和文化说明。目前发布的作品不支持在界面上直接删除或修改，发布前请确认内容无误。发布操作会把当前作品的信息提交到云端社区，不会影响你本地的项目记录。如果你想移除已发布的作品，请联系管理员处理。",
+        content: "在论坛发布作品后，其他用户可以看到作品预览、主题、元素和文化说明。由当前账号新发布的作品会标记为“我的作品”，打开详情后可以修改作品名称、主题、元素和文化说明，也可以删除论坛发布。编辑或删除只影响论坛内容，不会改动浏览器中的本地项目；出于权限安全考虑，旧版未记录发布凭证的帖子只能继续浏览和导入。",
       },
       {
         title: "如何把论坛里别人分享的作品导入到自己的创作？",
@@ -1036,7 +1045,7 @@ function ScrollingPatternBand() {
   );
 }
 
-export default function CreativeBeadStudio() {
+export default function CreativeBeadStudio({ initialView = "home" }: { initialView?: SiteView }) {
   const [language, setLanguage] = useState<AppLanguage>(() => loadAppLanguage());
   const ui = {
     brand: language === "en" ? "Doge" : "豆阁",
@@ -1048,8 +1057,8 @@ export default function CreativeBeadStudio() {
     forumEyebrow: language === "en" ? "Community Forum" : "社区论坛",
     forumTitle: language === "en" ? "Works, Sharing, and Template Imports" : "作品分享与模板导入",
     forumDesc: language === "en"
-      ? "Browse cloud-synced bead works, search by theme, author, or title, and import a work as your own editable project."
-      : "云端同步不同用户发布的拼豆作品，按主题、作者或作品名称搜索。点击作品进入预览后，可一键导入为自己的创作进度。",
+      ? "Browse and import shared bead works. You can also edit or delete works published from your current account."
+      : "浏览并导入大家分享的拼豆作品；当前账号发布的作品还可以随时编辑或删除。",
     publishCurrent: language === "en" ? "Publish Current Work" : "发布当前作品",
   };
   const L = useCallback((zh: string, en: string) => (language === "en" ? en : zh), [language]);
@@ -1060,7 +1069,7 @@ export default function CreativeBeadStudio() {
   }, [language]);
 
   const firstTheme = cultureThemes[1] ?? cultureThemes[0];
-  const [view, setView] = useState<SiteView>("home");
+  const [view, setView] = useState<SiteView>(initialView);
   const [step, setStep] = useState<StudioStep>("config");
   const [theme, setTheme] = useState(firstTheme.name);
   const [element, setElement] = useState(firstTheme.elements[0] ?? "传统纹样");
@@ -1224,6 +1233,13 @@ export default function CreativeBeadStudio() {
   const [cloudCommunityPosts, setCloudCommunityPosts] = useState<CloudCommunityPost[]>([]);
   const [communityLoading, setCommunityLoading] = useState(false);
   const [communityError, setCommunityError] = useState<string | null>(null);
+  const [communityEditDraft, setCommunityEditDraft] = useState<CommunityEditDraft | null>(null);
+  const [communityDeleteConfirm, setCommunityDeleteConfirm] = useState(false);
+  const [communityMutationLoading, setCommunityMutationLoading] = useState(false);
+
+  useEffect(() => {
+    document.cookie = `${SITE_VIEW_COOKIE_KEY}=${encodeURIComponent(view)}; Path=/; SameSite=Lax`;
+  }, [view]);
 
   const communityPosts = useMemo<CommunityPost[]>(() => {
     const cloudPosts = cloudCommunityPosts.map((post): CommunityPost => ({
@@ -1387,7 +1403,13 @@ export default function CreativeBeadStudio() {
     return () => clearTimeout(t);
   }, [toastMsg]);
 
-  // 检查是否有未保存的进度
+  useEffect(() => {
+    const handleCommunityChanged = () => setCommunityRefresh((value) => value + 1);
+    window.addEventListener(COMMUNITY_POSTS_CHANGED_EVENT, handleCommunityChanged);
+    return () => window.removeEventListener(COMMUNITY_POSTS_CHANGED_EVENT, handleCommunityChanged);
+  }, []);
+
+  // 加载论坛帖子，并在搜索、身份或帖子内容变化时刷新。
   useEffect(() => {
     let alive = true;
     setCommunityLoading(true);
@@ -1405,7 +1427,7 @@ export default function CreativeBeadStudio() {
     return () => {
       alive = false;
     };
-  }, [communityQuery, communityRefresh]);
+  }, [communityQuery, communityRefresh, currentUser]);
 
   const hasUnsavedWork = !!(sourceImageUrl || pattern || patternUrl);
 
@@ -2883,7 +2905,7 @@ export default function CreativeBeadStudio() {
     );
   };
 
-  const handleRestoreProject = useCallback((record: ProjectRecord) => {
+  const handleRestoreProject = useCallback((record: ProjectRecord, navigateToStudio = true) => {
     const restoredStep: StudioStep = record.currentStep
       ?? (record.patternData || record.patternUrl
         ? (record.completed ? "preview" : "pattern")
@@ -2925,7 +2947,7 @@ export default function CreativeBeadStudio() {
     setPattern(deserializePattern(record.patternData));
 
     setStep((record.patternData || record.patternUrl || record.extractedImageUrl || record.sourceImageUrl) ? restoredStep : "config");
-    setView("start");
+    if (navigateToStudio) setView("start");
   }, [clearResultSubjectSelection, clearSubjectIdentification]);
 
   useEffect(() => {
@@ -2939,7 +2961,7 @@ export default function CreativeBeadStudio() {
     if (!activeRecord) return;
 
     activeProjectRestoredRef.current = true;
-    handleRestoreProject(activeRecord);
+    handleRestoreProject(activeRecord, false);
   }, [handleRestoreProject, hasUnsavedWork, projectRecords]);
 
   // 自动保存当前作品到历史记录
@@ -3039,7 +3061,6 @@ export default function CreativeBeadStudio() {
         avatar: currentUser?.avatarUrl ?? "",
         colors: forcedColors,
       });
-      setCommunityRefresh((value) => value + 1);
       setToastType("success");
       setToastMsg(L("作品已发布到云端社区，并同步保存到个人主页。", "Work published to the cloud community and saved to your profile."));
       setView("community");
@@ -3048,6 +3069,79 @@ export default function CreativeBeadStudio() {
       setToastMsg(err instanceof Error ? err.message : L("作品发布失败", "Failed to publish work"));
     }
   }, [buildCurrentProjectRecord, currentUser, forcedColors, L, pattern, patternUrl, projectTitleDraft, refreshProjectRecords, sourceImageUrl]);
+
+  const openCommunityPost = useCallback((post: CommunityPost) => {
+    setSelectedCommunityPost(post);
+    setCommunityEditDraft(null);
+    setCommunityDeleteConfirm(false);
+  }, []);
+
+  const closeCommunityPost = useCallback(() => {
+    if (communityMutationLoading) return;
+    setSelectedCommunityPost(null);
+    setCommunityEditDraft(null);
+    setCommunityDeleteConfirm(false);
+  }, [communityMutationLoading]);
+
+  const beginCommunityPostEdit = useCallback((post: CommunityPost) => {
+    if (post.type !== "project" || !post.isOwnedByCurrentUser) return;
+    setCommunityDeleteConfirm(false);
+    setCommunityEditDraft({
+      title: post.title,
+      theme: post.theme,
+      element: post.element,
+      meaning: post.meaning,
+    });
+  }, []);
+
+  const saveCommunityPostEdits = useCallback(async () => {
+    if (!selectedCommunityPost || selectedCommunityPost.type !== "project" || !communityEditDraft) return;
+    if (!communityEditDraft.title.trim() || !communityEditDraft.theme.trim() || !communityEditDraft.element.trim()) {
+      setToastType("warning");
+      setToastMsg(L("作品名称、传统主题和核心元素不能为空。", "Title, theme, and core element are required."));
+      return;
+    }
+
+    setCommunityMutationLoading(true);
+    try {
+      const updated = await updateCommunityPost({
+        id: selectedCommunityPost.id,
+        title: communityEditDraft.title,
+        theme: communityEditDraft.theme,
+        element: communityEditDraft.element,
+        meaning: communityEditDraft.meaning,
+      });
+      setCloudCommunityPosts((posts) => posts.map((post) => (post.id === updated.id ? updated : post)));
+      setSelectedCommunityPost({ ...updated, type: "project" });
+      setCommunityEditDraft(null);
+      setToastType("success");
+      setToastMsg(L("论坛作品已更新。", "Forum work updated."));
+    } catch (err) {
+      setToastType("warning");
+      setToastMsg(err instanceof Error ? err.message : L("作品修改失败", "Failed to update work"));
+    } finally {
+      setCommunityMutationLoading(false);
+    }
+  }, [communityEditDraft, L, selectedCommunityPost]);
+
+  const removeSelectedCommunityPost = useCallback(async () => {
+    if (!selectedCommunityPost || selectedCommunityPost.type !== "project" || !selectedCommunityPost.isOwnedByCurrentUser) return;
+    setCommunityMutationLoading(true);
+    try {
+      await deleteCommunityPost(selectedCommunityPost.id);
+      setCloudCommunityPosts((posts) => posts.filter((post) => post.id !== selectedCommunityPost.id));
+      setSelectedCommunityPost(null);
+      setCommunityEditDraft(null);
+      setCommunityDeleteConfirm(false);
+      setToastType("success");
+      setToastMsg(L("论坛作品已删除，本地项目仍然保留。", "Forum work deleted; your local project is unchanged."));
+    } catch (err) {
+      setToastType("warning");
+      setToastMsg(err instanceof Error ? err.message : L("作品删除失败", "Failed to delete work"));
+    } finally {
+      setCommunityMutationLoading(false);
+    }
+  }, [L, selectedCommunityPost]);
 
   const saveCurrentProject = useCallback(async () => {
     if (!sourceImageUrl && !pattern && !patternUrl) {
@@ -3090,7 +3184,6 @@ export default function CreativeBeadStudio() {
       }
       refreshProjectRecords();
       handleRestoreProject(cloned);
-      setCommunityRefresh((value) => value + 1);
       setSelectedCommunityPost(null);
       setToastType("success");
       setToastMsg(L("已导入作品模板，并保存到个人主页。", "Work template imported and saved to your profile."));
@@ -3135,7 +3228,6 @@ export default function CreativeBeadStudio() {
     refreshProjectRecords();
     handleRestoreProject(record);
     setSelectedCommunityPost(null);
-    setCommunityRefresh((value) => value + 1);
     setToastType("success");
     setToastMsg(L("已导入社区模板，并保存到个人主页。", "Community template imported and saved to your profile."));
   }, [handleRestoreProject, L, refreshProjectRecords]);
@@ -3550,7 +3642,7 @@ export default function CreativeBeadStudio() {
               <button
                 key={post.id}
                 type="button"
-                onClick={() => setSelectedCommunityPost(post)}
+                onClick={() => openCommunityPost(post)}
                 className="group rounded-lg border border-stone-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-1 hover:border-[#8f1d21]/40 hover:shadow-md"
               >
                 <div className="flex items-center gap-3">
@@ -3561,7 +3653,14 @@ export default function CreativeBeadStudio() {
                     ) : displayPost.avatar}
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-stone-900">{displayPost.author}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-semibold text-stone-900">{displayPost.author}</p>
+                      {post.type === "project" && post.isOwnedByCurrentUser && (
+                        <span className="shrink-0 rounded-full bg-[#8f1d21]/10 px-2 py-0.5 text-[11px] font-semibold text-[#8f1d21]">
+                          {L("我的作品", "My Work")}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-stone-500">{formatPostTime(displayPost.createdAt, language)}</p>
                   </div>
                 </div>
@@ -3609,7 +3708,7 @@ export default function CreativeBeadStudio() {
           <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
             <button
               type="button"
-              onClick={() => setSelectedCommunityPost(null)}
+              onClick={closeCommunityPost}
               className="absolute right-4 top-4 z-10 rounded-md border border-stone-200 bg-white px-3 py-1.5 text-sm text-stone-600 shadow-sm transition hover:bg-stone-50"
             >
               {L("关闭", "Close")}
@@ -3663,7 +3762,29 @@ export default function CreativeBeadStudio() {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end border-t border-stone-200 bg-stone-50 px-6 py-4">
+            <div className="flex flex-col gap-3 border-t border-stone-200 bg-stone-50 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+              {selectedCommunityPost.type === "project" && selectedCommunityPost.isOwnedByCurrentUser ? (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => beginCommunityPostEdit(selectedCommunityPost)}
+                    className="rounded-md border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-[#8f1d21]/40 hover:text-[#8f1d21]"
+                  >
+                    {L("编辑作品", "Edit Work")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCommunityDeleteConfirm(true)}
+                    className="rounded-md border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50"
+                  >
+                    {L("删除作品", "Delete Work")}
+                  </button>
+                </div>
+              ) : (
+                <p className="text-xs text-stone-500">
+                  {L("只能编辑或删除自己发布的作品。", "Only your own published works can be edited or deleted.")}
+                </p>
+              )}
               <button
                 type="button"
                 onClick={() => importCommunityPost(selectedCommunityPost)}
@@ -3675,6 +3796,107 @@ export default function CreativeBeadStudio() {
           </div>
             );
           })()}
+        </div>
+      )}
+
+      {selectedCommunityPost && communityEditDraft && (
+        <div className="fixed inset-0 z-[60] grid place-items-center bg-black/55 px-4 py-8">
+          <div className="w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-2xl">
+            <div className="border-b border-stone-200 px-6 py-5">
+              <p className="text-sm font-semibold text-[#8f1d21]">{L("管理我的作品", "Manage My Work")}</p>
+              <h2 className="mt-1 text-2xl font-semibold text-stone-950">{L("编辑论坛作品", "Edit Forum Work")}</h2>
+              <p className="mt-2 text-sm text-stone-500">
+                {L("修改只影响论坛中的展示信息，不会改动浏览器里保存的本地项目。", "Changes affect the forum post only and do not modify your locally saved project.")}
+              </p>
+            </div>
+            <div className="grid gap-5 px-6 py-6 sm:grid-cols-2">
+              <label className="sm:col-span-2">
+                <span className="text-sm font-medium text-stone-700">{L("作品名称", "Work Title")}</span>
+                <input
+                  value={communityEditDraft.title}
+                  onChange={(event) => setCommunityEditDraft((draft) => draft ? { ...draft, title: event.target.value } : draft)}
+                  maxLength={120}
+                  className="mt-2 w-full rounded-md border border-stone-300 px-4 py-3 text-sm outline-none focus:border-[#8f1d21] focus:ring-2 focus:ring-[#8f1d21]/20"
+                />
+              </label>
+              <label>
+                <span className="text-sm font-medium text-stone-700">{L("传统主题", "Traditional Theme")}</span>
+                <input
+                  value={communityEditDraft.theme}
+                  onChange={(event) => setCommunityEditDraft((draft) => draft ? { ...draft, theme: event.target.value } : draft)}
+                  maxLength={80}
+                  className="mt-2 w-full rounded-md border border-stone-300 px-4 py-3 text-sm outline-none focus:border-[#8f1d21] focus:ring-2 focus:ring-[#8f1d21]/20"
+                />
+              </label>
+              <label>
+                <span className="text-sm font-medium text-stone-700">{L("核心元素", "Core Element")}</span>
+                <input
+                  value={communityEditDraft.element}
+                  onChange={(event) => setCommunityEditDraft((draft) => draft ? { ...draft, element: event.target.value } : draft)}
+                  maxLength={80}
+                  className="mt-2 w-full rounded-md border border-stone-300 px-4 py-3 text-sm outline-none focus:border-[#8f1d21] focus:ring-2 focus:ring-[#8f1d21]/20"
+                />
+              </label>
+              <label className="sm:col-span-2">
+                <span className="text-sm font-medium text-stone-700">{L("文化说明", "Cultural Notes")}</span>
+                <textarea
+                  value={communityEditDraft.meaning}
+                  onChange={(event) => setCommunityEditDraft((draft) => draft ? { ...draft, meaning: event.target.value } : draft)}
+                  maxLength={800}
+                  rows={5}
+                  className="mt-2 w-full resize-y rounded-md border border-stone-300 px-4 py-3 text-sm leading-6 outline-none focus:border-[#8f1d21] focus:ring-2 focus:ring-[#8f1d21]/20"
+                />
+              </label>
+            </div>
+            <div className="flex justify-end gap-3 border-t border-stone-200 bg-stone-50 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setCommunityEditDraft(null)}
+                disabled={communityMutationLoading}
+                className="rounded-md border border-stone-300 bg-white px-5 py-2.5 text-sm font-semibold text-stone-700 disabled:opacity-50"
+              >
+                {L("取消", "Cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={saveCommunityPostEdits}
+                disabled={communityMutationLoading}
+                className="rounded-md bg-[#8f1d21] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#a82428] disabled:cursor-wait disabled:opacity-60"
+              >
+                {communityMutationLoading ? L("正在保存...", "Saving...") : L("保存修改", "Save Changes")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedCommunityPost && communityDeleteConfirm && (
+        <div className="fixed inset-0 z-[60] grid place-items-center bg-black/55 px-4 py-8">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-2xl">
+            <p className="text-sm font-semibold text-red-700">{L("删除论坛作品", "Delete Forum Work")}</p>
+            <h2 className="mt-2 text-xl font-semibold text-stone-950">{L("确定删除这条发布吗？", "Delete this published work?")}</h2>
+            <p className="mt-3 text-sm leading-6 text-stone-600">
+              {L("删除后其他人将无法再看到或导入它，但你浏览器中的本地项目不会被删除。", "Others will no longer see or import it. Your local browser project will remain intact.")}
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setCommunityDeleteConfirm(false)}
+                disabled={communityMutationLoading}
+                className="rounded-md border border-stone-300 px-5 py-2.5 text-sm font-semibold text-stone-700 disabled:opacity-50"
+              >
+                {L("取消", "Cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={removeSelectedCommunityPost}
+                disabled={communityMutationLoading}
+                className="rounded-md bg-red-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-800 disabled:cursor-wait disabled:opacity-60"
+              >
+                {communityMutationLoading ? L("正在删除...", "Deleting...") : L("确认删除", "Delete")}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

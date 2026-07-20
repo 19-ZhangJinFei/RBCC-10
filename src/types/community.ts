@@ -6,12 +6,14 @@ export type CommunityPost = {
   author: string;
   avatar: string;
   createdAt: number;
+  updatedAt: number;
   theme: string;
   element: string;
   meaning: string;
   colors: string[];
   productId: string;
   record: ProjectRecord;
+  isOwnedByCurrentUser?: boolean;
 };
 
 export type PublishCommunityPostInput = {
@@ -19,4 +21,12 @@ export type PublishCommunityPostInput = {
   author: string;
   avatar: string;
   colors?: string[];
+};
+
+export type UpdateCommunityPostInput = {
+  id: string;
+  title: string;
+  theme: string;
+  element: string;
+  meaning: string;
 };
