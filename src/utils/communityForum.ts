@@ -78,11 +78,81 @@ function keepSmallDataUrl(value: string | null): string | null {
   return value.length <= MAX_INLINE_IMAGE_BYTES ? value : null;
 }
 
-function compactRecordForCommunity(record: ProjectRecord): ProjectRecord {
-  const previewUrl = keepSmallDataUrl(record.patternUrl)
-    ?? keepSmallDataUrl(record.cleanPatternUrl)
-    ?? keepSmallDataUrl(record.mockupUrl)
-    ?? keepSmallDataUrl(record.extractedImageUrl);
+function loadPreviewImage(source: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const timeout = window.setTimeout(() => reject(new Error("Preview image timed out")), 10_000);
+    image.onload = () => {
+      window.clearTimeout(timeout);
+      resolve(image);
+    };
+    image.onerror = () => {
+      window.clearTimeout(timeout);
+      reject(new Error("Preview image failed to load"));
+    };
+    if (/^https?:\/\//i.test(source)) image.crossOrigin = "anonymous";
+    image.src = source;
+  });
+}
+
+async function createPreviewThumbnail(source: string): Promise<string | null> {
+  if (typeof window === "undefined" || typeof document === "undefined") return null;
+  try {
+    const image = await loadPreviewImage(source);
+    const sourceWidth = image.naturalWidth || image.width;
+    const sourceHeight = image.naturalHeight || image.height;
+    if (!sourceWidth || !sourceHeight) return null;
+
+    for (const maxSide of [640, 480]) {
+      const scale = Math.min(1, maxSide / Math.max(sourceWidth, sourceHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+      canvas.height = Math.max(1, Math.round(sourceHeight * scale));
+      const context = canvas.getContext("2d");
+      if (!context) return null;
+      context.fillStyle = "#FFFFFF";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+      for (const quality of [0.82, 0.68]) {
+        const thumbnail = canvas.toDataURL("image/jpeg", quality);
+        if (thumbnail.length <= MAX_INLINE_IMAGE_BYTES) return thumbnail;
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function isStableImageUrl(value: string): boolean {
+  return value.startsWith("/") || /^https?:\/\//i.test(value);
+}
+
+async function buildCommunityPreview(record: ProjectRecord): Promise<string | null> {
+  const candidates = [
+    record.patternUrl,
+    record.cleanPatternUrl,
+    record.mockupUrl,
+    record.extractedImageUrl,
+    record.sourceImageUrl,
+  ].filter((value): value is string => Boolean(value));
+
+  for (const candidate of candidates) {
+    if (candidate.startsWith("data:")) {
+      const compact = keepSmallDataUrl(candidate);
+      if (compact) return compact;
+    }
+    if (candidate.startsWith("/")) return candidate;
+    const thumbnail = await createPreviewThumbnail(candidate);
+    if (thumbnail) return thumbnail;
+    if (isStableImageUrl(candidate)) return candidate;
+  }
+  return null;
+}
+
+async function compactRecordForCommunity(record: ProjectRecord): Promise<ProjectRecord> {
+  const previewUrl = await buildCommunityPreview(record);
 
   return {
     ...record,
@@ -111,7 +181,7 @@ export async function fetchCommunityPosts(query = ""): Promise<CommunityPost[]> 
 export async function publishCommunityPost(input: PublishCommunityPostInput): Promise<CommunityPost> {
   const body: PublishCommunityPostInput = {
     ...input,
-    record: compactRecordForCommunity(input.record),
+    record: await compactRecordForCommunity(input.record),
     avatar: keepSmallDataUrl(input.avatar) ?? input.avatar,
   };
   const response = await fetch("/api/community-posts", {

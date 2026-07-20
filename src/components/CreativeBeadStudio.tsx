@@ -8,6 +8,7 @@ import ProfilePage from "@/components/ProfilePage";
 import SubjectMaskEditor, { type MaskMode } from "@/components/SubjectMaskEditor";
 import LoginModal from "@/components/LoginModal";
 import AiChatPanel from "@/components/ai/AiChatPanel";
+import { ProjectFallbackPreview } from "@/components/ProjectFallbackPreview";
 import { clearAiChatHistory } from "@/utils/aiChat";
 import { deleteProjectRecord, loadActiveProjectId, loadProjectHistoryAsync, saveProjectRecord, loadCurrentUserProfile, loadApiConfig, DEFAULT_AUTO_SAVE_INTERVAL_SECONDS, normalizeAutoSaveIntervalSeconds, type StoredUser } from "@/utils/profileStorage";
 import { loadAppLanguage, saveAppLanguage, type AppLanguage } from "@/utils/language";
@@ -3551,7 +3552,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
 
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {filteredProjectRecords.map((record) => {
-              const previewUrl = record.patternUrl || record.cleanPatternUrl || record.sourceImageUrl || getImportedTemplatePreview(record);
+              const previewUrl = record.mockupUrl || record.patternUrl || record.cleanPatternUrl || record.extractedImageUrl || record.sourceImageUrl || getImportedTemplatePreview(record);
               return (
                 <article key={record.id} className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
                   <button type="button" onClick={() => handleRestoreProject(record)} className="block w-full text-left">
@@ -3559,7 +3560,12 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                       {previewUrl ? (
                         <img src={previewUrl} alt={record.title} className="h-full w-full object-contain" />
                       ) : (
-                        <div className="grid h-full place-items-center text-sm text-stone-400">{L("暂无预览", "No preview")}</div>
+                        <ProjectFallbackPreview
+                          colors={record.forcedColors}
+                          theme={displayProjectTheme(record.theme)}
+                          element={record.element}
+                          language={language}
+                        />
                       )}
                     </div>
                     <h2 className="mt-4 truncate text-lg font-semibold text-stone-950">{record.title || displayProjectTheme(record.theme)}</h2>

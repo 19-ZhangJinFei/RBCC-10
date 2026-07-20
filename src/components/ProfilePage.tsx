@@ -23,6 +23,7 @@ import {
 } from "@/utils/profileStorage";
 import AvatarCropper from "@/components/AvatarCropper";
 import LoginModal from "@/components/LoginModal";
+import { ProjectFallbackPreview } from "@/components/ProjectFallbackPreview";
 import { publishCommunityPost } from "@/utils/communityForum";
 import { languageLabel, type AppLanguage } from "@/utils/language";
 
@@ -825,7 +826,7 @@ function ProjectCard({ record, selected, onToggleSelect, onRestore, onExport, on
   text: Record<string, string>;
 }) {
   const [showMenu, setShowMenu] = useState(false);
-  const previewUrl = record.mockupUrl || record.patternUrl || record.cleanPatternUrl;
+  const previewUrl = record.mockupUrl || record.patternUrl || record.cleanPatternUrl || record.extractedImageUrl || record.sourceImageUrl;
   return (
     <div className={`group relative rounded-lg border p-3 transition ${
       selected ? "border-[#8f1d21] ring-2 ring-[#8f1d21]/30 bg-[#8f1d21]/5" : "border-stone-200 bg-stone-50 hover:border-stone-400"
@@ -840,7 +841,11 @@ function ProjectCard({ record, selected, onToggleSelect, onRestore, onExport, on
         </div>
       )}
       <div className="aspect-video overflow-hidden rounded-md border border-stone-200 bg-white" onClick={onToggleSelect || onRestore}>
-        {previewUrl ? <img src={previewUrl} alt={record.title} className="h-full w-full object-contain" /> : <div className="grid h-full place-items-center text-xs text-stone-400">{text.noPreview}</div>}
+        {previewUrl ? (
+          <img src={previewUrl} alt={record.title} className="h-full w-full object-contain" />
+        ) : (
+          <ProjectFallbackPreview colors={record.forcedColors} theme={record.theme} element={record.element} />
+        )}
       </div>
       <div className="mt-2 flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
