@@ -3322,14 +3322,33 @@ export default function CreativeBeadStudio() {
 
       {view === "home" && (
         <>
-          <section className="relative overflow-hidden bg-[#2b2118] text-white">
-            <div className="mx-auto max-w-7xl px-4 pb-8 pt-14 sm:px-6 lg:px-8">
+          <section className="relative isolate overflow-hidden bg-[#2b2118] text-white">
+            <Image
+              src="/home/traditional-village-hero.png"
+              alt=""
+              fill
+              priority
+              quality={92}
+              sizes="100vw"
+              className="-z-20 object-cover object-[50%_42%] brightness-[1.15] saturate-[1.08] sm:object-[center_45%]"
+            />
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 -z-10"
+              style={{
+                background:
+                  "linear-gradient(90deg, rgba(32, 21, 13, 0.80) 0%, rgba(32, 21, 13, 0.62) 42%, rgba(32, 21, 13, 0.48) 60%, rgba(32, 21, 13, 0.28) 72%, rgba(32, 21, 13, 0.05) 84%)",
+              }}
+            />
+            <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-b from-[#20150d]/2 via-transparent to-[#20150d]/42" />
+
+            <div className="relative mx-auto max-w-7xl px-4 pb-8 pt-14 sm:px-6 lg:px-8">
               <p className="text-sm font-semibold text-[#f2c46d]">{L("千年纹样 × 掌间拼豆", "Ancient Patterns x Handheld Bead Art")}</p>
 
               {/* 打字区域固定容器：防止打字时高度变化导致下方元素下移 */}
               <div className="min-h-[200px] md:min-h-[220px] lg:min-h-[260px]">
                 {/* 打字机标题 */}
-                <h1 className="mt-3 max-w-4xl whitespace-nowrap text-2xl font-semibold leading-tight tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
+                <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl md:text-5xl lg:text-6xl xl:whitespace-nowrap">
                   {typedLine1}
                   {typedLine1.length > 0 && typedLine1.length < homeTypingLine1.length && (
                     <span className="inline-block w-[2px] h-[0.8em] bg-[#f2c46d] ml-0.5 animate-pulse align-middle" />
