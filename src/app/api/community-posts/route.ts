@@ -20,6 +20,7 @@ type StoredCommunityPost = CommunityPost & {
 type OwnerCredentials = {
   ownerId: string;
   ownerTokenHash: string;
+  displayName: string;
 };
 
 let mutationQueue: Promise<void> = Promise.resolve();
@@ -64,16 +65,35 @@ function hashOwnerToken(token: string): string {
 function readOwnerCredentials(request: NextRequest): OwnerCredentials | null {
   const ownerId = request.headers.get("x-douge-owner-id")?.trim() ?? "";
   const ownerToken = request.headers.get("x-douge-owner-token")?.trim() ?? "";
+  const encodedDisplayName = request.headers.get("x-douge-owner-name")?.trim() ?? "";
   if (!ownerId || ownerId.length > 180 || ownerToken.length < 12 || ownerToken.length > 240) return null;
-  return { ownerId, ownerTokenHash: hashOwnerToken(ownerToken) };
+  let displayName = "";
+  try {
+    displayName = decodeURIComponent(encodedDisplayName).trim().slice(0, 120);
+  } catch {
+    displayName = encodedDisplayName.trim().slice(0, 120);
+  }
+  return { ownerId, ownerTokenHash: hashOwnerToken(ownerToken), displayName };
+}
+
+function normalizeOwnerName(value: string): string {
+  return value.trim().normalize("NFKC").toLocaleLowerCase("zh-CN");
+}
+
+function isLegacyPostOwnedBy(post: StoredCommunityPost, credentials: OwnerCredentials | null): boolean {
+  return !!credentials?.displayName
+    && !post.ownerId
+    && !post.ownerTokenHash
+    && normalizeOwnerName(post.author) === normalizeOwnerName(credentials.displayName);
 }
 
 function isOwnedBy(post: StoredCommunityPost, credentials: OwnerCredentials | null): boolean {
-  return !!credentials
+  const hasMatchingCredentials = !!credentials
     && !!post.ownerId
     && !!post.ownerTokenHash
     && post.ownerId === credentials.ownerId
     && post.ownerTokenHash === credentials.ownerTokenHash;
+  return hasMatchingCredentials || isLegacyPostOwnedBy(post, credentials);
 }
 
 function toPublicPost(post: StoredCommunityPost, credentials: OwnerCredentials | null): CommunityPost {
@@ -213,6 +233,8 @@ export async function PATCH(request: NextRequest) {
       const updatedAt = Date.now();
       const post: StoredCommunityPost = {
         ...current,
+        ownerId: current.ownerId ?? credentials.ownerId,
+        ownerTokenHash: current.ownerTokenHash ?? credentials.ownerTokenHash,
         title,
         theme,
         element,

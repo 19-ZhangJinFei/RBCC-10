@@ -1,6 +1,6 @@
 import type { CommunityPost, PublishCommunityPostInput, UpdateCommunityPostInput } from "@/types/community";
 import type { ProjectRecord } from "@/types/projectTypes";
-import { loadCurrentUser } from "@/utils/profileStorage";
+import { loadCurrentUser, loadCurrentUserProfile } from "@/utils/profileStorage";
 
 const MAX_INLINE_IMAGE_BYTES = 900_000;
 export const COMMUNITY_POSTS_CHANGED_EVENT = "douge:community-posts-changed";
@@ -10,6 +10,7 @@ const COMMUNITY_TOKEN_PREFIX = "douge_community_owner_token:";
 type CommunityCredentials = {
   ownerId: string;
   ownerToken: string;
+  ownerDisplayName: string;
 };
 
 function randomCredential(): string {
@@ -31,6 +32,7 @@ function getCommunityCredentials(): CommunityCredentials | null {
   if (typeof window === "undefined" || typeof localStorage?.getItem !== "function") return null;
   try {
     const username = loadCurrentUser();
+    const ownerDisplayName = loadCurrentUserProfile()?.nickname.trim() ?? "";
     let ownerId = username ? toHeaderSafeOwnerId(username) : localStorage.getItem(COMMUNITY_GUEST_ID_KEY);
     if (!ownerId) {
       ownerId = `guest:${randomCredential()}`;
@@ -43,7 +45,7 @@ function getCommunityCredentials(): CommunityCredentials | null {
       ownerToken = randomCredential();
       localStorage.setItem(tokenKey, ownerToken);
     }
-    return { ownerId, ownerToken };
+    return { ownerId, ownerToken, ownerDisplayName };
   } catch {
     return null;
   }
@@ -57,6 +59,9 @@ function buildCommunityHeaders(includeJson = false): HeadersInit {
       ? {
           "x-douge-owner-id": credentials.ownerId,
           "x-douge-owner-token": credentials.ownerToken,
+          ...(credentials.ownerDisplayName
+            ? { "x-douge-owner-name": encodeURIComponent(credentials.ownerDisplayName) }
+            : {}),
         }
       : {}),
   };
