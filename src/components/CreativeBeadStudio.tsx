@@ -13,7 +13,7 @@ import { clearAiChatHistory } from "@/utils/aiChat";
 import { deleteProjectRecord, loadActiveProjectId, loadProjectHistoryAsync, saveProjectRecord, loadCurrentUserProfile, loadApiConfig, DEFAULT_AUTO_SAVE_INTERVAL_SECONDS, normalizeAutoSaveIntervalSeconds, type StoredUser } from "@/utils/profileStorage";
 import { loadAppLanguage, saveAppLanguage, type AppLanguage } from "@/utils/language";
 import { SITE_VIEW_COOKIE_KEY, type SiteView } from "@/utils/siteView";
-import { COMMUNITY_POSTS_CHANGED_EVENT, deleteCommunityPost, fetchCommunityPosts, publishCommunityPost, updateCommunityPost } from "@/utils/communityForum";
+import { COMMUNITY_POSTS_CHANGED_EVENT, deleteCommunityPost, fetchCommunityPosts, loadCachedCommunityPosts, publishCommunityPost, saveCachedCommunityPosts, updateCommunityPost } from "@/utils/communityForum";
 import type { ProjectRecord } from "@/types/projectTypes";
 import type { CommunityPost as CloudCommunityPost } from "@/types/community";
 import type { SubjectIdentification } from "@/types/subjectIdentification";
@@ -1238,7 +1238,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
   const [communityQuery, setCommunityQuery] = useState("");
   const [communityRefresh, setCommunityRefresh] = useState(0);
   const [selectedCommunityPost, setSelectedCommunityPost] = useState<CommunityPost | null>(null);
-  const [cloudCommunityPosts, setCloudCommunityPosts] = useState<CloudCommunityPost[]>([]);
+  const [cloudCommunityPosts, setCloudCommunityPosts] = useState<CloudCommunityPost[]>(() => loadCachedCommunityPosts());
   const [communityLoading, setCommunityLoading] = useState(false);
   const [communityError, setCommunityError] = useState<string | null>(null);
   const [communityEditDraft, setCommunityEditDraft] = useState<CommunityEditDraft | null>(null);
@@ -1250,11 +1250,17 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
   }, [view]);
 
   const communityPosts = useMemo<CommunityPost[]>(() => {
-    const cloudPosts = cloudCommunityPosts.map((post): CommunityPost => ({
-      ...post,
-      type: "project",
-    }));
     const query = communityQuery.trim().toLowerCase();
+    const cloudPosts = cloudCommunityPosts
+      .filter((post) => {
+        if (!query) return true;
+        return [post.title, post.author, post.theme, post.element, post.meaning]
+          .some((value) => value.toLowerCase().includes(query));
+      })
+      .map((post): CommunityPost => ({
+        ...post,
+        type: "project",
+      }));
     const templatePosts = communityTemplates
       .filter((template) => {
         if (!query) return true;
@@ -1417,25 +1423,63 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
     return () => window.removeEventListener(COMMUNITY_POSTS_CHANGED_EVENT, handleCommunityChanged);
   }, []);
 
-  // 加载论坛帖子，并在搜索、身份或帖子内容变化时刷新。
+  // 用户身份变化时先恢复该身份上次成功同步的缓存，避免等待网络时只显示默认作品。
+  useEffect(() => {
+    setCloudCommunityPosts(loadCachedCommunityPosts());
+  }, [currentUser]);
+
+  // 加载完整论坛列表；搜索只在本地筛选，失败或超时时保留现有缓存。
   useEffect(() => {
     let alive = true;
+    let timedOut = false;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 12_000);
     setCommunityLoading(true);
     setCommunityError(null);
-    fetchCommunityPosts(communityQuery)
+    fetchCommunityPosts("", controller.signal)
       .then((posts) => {
-        if (alive) setCloudCommunityPosts(posts);
+        if (!alive) return;
+        setCloudCommunityPosts(posts);
+        saveCachedCommunityPosts(posts);
       })
       .catch((err) => {
-        if (alive) setCommunityError(err instanceof Error ? err.message : "社区作品加载失败");
+        if (!alive) return;
+        setCommunityError(timedOut
+          ? L("社区同步超时，已显示上次加载的内容。", "Community sync timed out. Showing the last loaded content.")
+          : err instanceof Error ? err.message : L("社区作品加载失败", "Failed to load community works"));
       })
       .finally(() => {
+        window.clearTimeout(timeout);
         if (alive) setCommunityLoading(false);
       });
     return () => {
       alive = false;
+      window.clearTimeout(timeout);
+      controller.abort();
     };
-  }, [communityQuery, communityRefresh, currentUser]);
+  }, [communityRefresh, currentUser, L]);
+
+  // 论坛停留期间定期静默同步；窗口重新激活、标签页恢复或网络恢复时立即同步。
+  useEffect(() => {
+    if (view !== "community") return;
+    const refresh = () => setCommunityRefresh((value) => value + 1);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    const interval = window.setInterval(refresh, 60_000);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("online", refresh);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("online", refresh);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [view]);
 
   const hasUnsavedWork = !!(sourceImageUrl || pattern || patternUrl);
 
@@ -3066,11 +3110,16 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
     }
     refreshProjectRecords();
     try {
-      await publishCommunityPost({
+      const published = await publishCommunityPost({
         record,
         author: currentUser?.nickname ?? L("豆阁用户", "Doge User"),
         avatar: currentUser?.avatarUrl ?? "",
         colors: forcedColors,
+      });
+      setCloudCommunityPosts((posts) => {
+        const nextPosts = [published, ...posts.filter((post) => post.id !== published.id)];
+        saveCachedCommunityPosts(nextPosts);
+        return nextPosts;
       });
       setToastType("success");
       setToastMsg(L("作品已发布到云端社区，并同步保存到个人主页。", "Work published to the cloud community and saved to your profile."));
@@ -3122,7 +3171,11 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
         element: communityEditDraft.element,
         meaning: communityEditDraft.meaning,
       });
-      setCloudCommunityPosts((posts) => posts.map((post) => (post.id === updated.id ? updated : post)));
+      setCloudCommunityPosts((posts) => {
+        const nextPosts = posts.map((post) => (post.id === updated.id ? updated : post));
+        saveCachedCommunityPosts(nextPosts);
+        return nextPosts;
+      });
       setSelectedCommunityPost({ ...updated, type: "project" });
       setCommunityEditDraft(null);
       setToastType("success");
@@ -3140,7 +3193,11 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
     setCommunityMutationLoading(true);
     try {
       await deleteCommunityPost(selectedCommunityPost.id);
-      setCloudCommunityPosts((posts) => posts.filter((post) => post.id !== selectedCommunityPost.id));
+      setCloudCommunityPosts((posts) => {
+        const nextPosts = posts.filter((post) => post.id !== selectedCommunityPost.id);
+        saveCachedCommunityPosts(nextPosts);
+        return nextPosts;
+      });
       setSelectedCommunityPost(null);
       setCommunityEditDraft(null);
       setCommunityDeleteConfirm(false);
@@ -3698,7 +3755,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
             })}
           </div>
 
-          {communityLoading && (
+          {communityLoading && cloudCommunityPosts.length === 0 && (
             <div className="mt-10 rounded-lg border border-stone-200 bg-white p-8 text-center text-sm text-stone-500">
               {L("正在加载云端社区作品...", "Loading cloud community works...")}
             </div>

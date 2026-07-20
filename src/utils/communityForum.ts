@@ -3,9 +3,12 @@ import type { ProjectRecord } from "@/types/projectTypes";
 import { loadCurrentUser, loadCurrentUserProfile } from "@/utils/profileStorage";
 
 const MAX_INLINE_IMAGE_BYTES = 900_000;
+const MAX_CACHED_PREVIEW_BYTES = 180_000;
+const MAX_CACHED_COMMUNITY_POSTS = 20;
 export const COMMUNITY_POSTS_CHANGED_EVENT = "douge:community-posts-changed";
 const COMMUNITY_GUEST_ID_KEY = "douge_community_guest_id";
 const COMMUNITY_TOKEN_PREFIX = "douge_community_owner_token:";
+const COMMUNITY_POSTS_CACHE_PREFIX = "douge_community_posts_cache_v1:";
 
 type CommunityCredentials = {
   ownerId: string;
@@ -70,6 +73,79 @@ function buildCommunityHeaders(includeJson = false): HeadersInit {
 function notifyCommunityPostsChanged(): void {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event(COMMUNITY_POSTS_CHANGED_EVENT));
+  }
+}
+
+function getCommunityPostsCacheKey(): string | null {
+  const credentials = getCommunityCredentials();
+  if (!credentials) return null;
+  return `${COMMUNITY_POSTS_CACHE_PREFIX}${credentials.ownerId}:${encodeURIComponent(credentials.ownerDisplayName.toLowerCase())}`;
+}
+
+function keepCachedImageUrl(value: string | null | undefined): string | null {
+  if (!value || value.startsWith("blob:")) return null;
+  if (value.startsWith("data:")) {
+    return value.length <= MAX_CACHED_PREVIEW_BYTES ? value : null;
+  }
+  return isStableImageUrl(value) ? value : null;
+}
+
+function compactPostForCache(post: CommunityPost): CommunityPost {
+  const previewUrl = [
+    post.record.patternUrl,
+    post.record.cleanPatternUrl,
+    post.record.mockupUrl,
+    post.record.extractedImageUrl,
+    post.record.sourceImageUrl,
+  ].map(keepCachedImageUrl).find((value): value is string => Boolean(value)) ?? null;
+
+  return {
+    ...post,
+    avatar: (keepCachedImageUrl(post.avatar) ?? post.avatar.slice(0, 2)) || post.author.slice(0, 1),
+    record: {
+      ...post.record,
+      sourceImageUrl: null,
+      extractedImageUrl: null,
+      patternData: null,
+      patternUrl: previewUrl,
+      cleanPatternUrl: null,
+      mockupUrl: null,
+      productSceneUrl: null,
+    },
+  };
+}
+
+/** 立即恢复上次成功同步的论坛内容，网络请求会在后台刷新它。 */
+export function loadCachedCommunityPosts(): CommunityPost[] {
+  if (typeof window === "undefined") return [];
+  const cacheKey = getCommunityPostsCacheKey();
+  if (!cacheKey) return [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(cacheKey) ?? "[]") as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((post): post is CommunityPost => (
+      typeof post === "object"
+      && post !== null
+      && typeof (post as CommunityPost).id === "string"
+      && typeof (post as CommunityPost).record === "object"
+      && (post as CommunityPost).record !== null
+    ));
+  } catch {
+    return [];
+  }
+}
+
+export function saveCachedCommunityPosts(posts: CommunityPost[]): void {
+  if (typeof window === "undefined") return;
+  const cacheKey = getCommunityPostsCacheKey();
+  if (!cacheKey) return;
+  try {
+    localStorage.setItem(
+      cacheKey,
+      JSON.stringify(posts.slice(0, MAX_CACHED_COMMUNITY_POSTS).map(compactPostForCache)),
+    );
+  } catch {
+    // 缓存空间不足不会影响云端论坛的正常使用。
   }
 }
 
@@ -165,11 +241,13 @@ async function compactRecordForCommunity(record: ProjectRecord): Promise<Project
   };
 }
 
-export async function fetchCommunityPosts(query = ""): Promise<CommunityPost[]> {
-  const params = query.trim() ? `?q=${encodeURIComponent(query.trim())}` : "";
-  const response = await fetch(`/api/community-posts${params}`, {
+export async function fetchCommunityPosts(query = "", signal?: AbortSignal): Promise<CommunityPost[]> {
+  const searchParams = new URLSearchParams({ _: Date.now().toString() });
+  if (query.trim()) searchParams.set("q", query.trim());
+  const response = await fetch(`/api/community-posts?${searchParams.toString()}`, {
     cache: "no-store",
     headers: buildCommunityHeaders(),
+    signal,
   });
   if (!response.ok) {
     throw new Error("社区作品加载失败");
