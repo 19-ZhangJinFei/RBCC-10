@@ -19,11 +19,19 @@ function randomCredential(): string {
   return `${Date.now()}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`;
 }
 
+function toHeaderSafeOwnerId(username: string): string {
+  const normalized = username.trim().toLowerCase();
+  const headerSafeUsername = /^[\x20-\x7E\xA0-\xFF]+$/.test(normalized)
+    ? normalized
+    : encodeURIComponent(normalized);
+  return `user:${headerSafeUsername}`;
+}
+
 function getCommunityCredentials(): CommunityCredentials | null {
   if (typeof window === "undefined" || typeof localStorage?.getItem !== "function") return null;
   try {
     const username = loadCurrentUser();
-    let ownerId = username ? `user:${username.trim().toLowerCase()}` : localStorage.getItem(COMMUNITY_GUEST_ID_KEY);
+    let ownerId = username ? toHeaderSafeOwnerId(username) : localStorage.getItem(COMMUNITY_GUEST_ID_KEY);
     if (!ownerId) {
       ownerId = `guest:${randomCredential()}`;
       localStorage.setItem(COMMUNITY_GUEST_ID_KEY, ownerId);

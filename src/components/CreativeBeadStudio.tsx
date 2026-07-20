@@ -301,7 +301,13 @@ const communityTemplates: CommunityTemplate[] = showcase.map((item, index) => ({
   meaning: item.meaning,
   colors: item.colors,
   productId: "coaster",
+  previewImage: item.previewImage,
 }));
+
+function getImportedTemplatePreview(record: ProjectRecord): string | null {
+  if (!/·\s*(导入|Import)$/.test(record.title)) return null;
+  return showcase.find((item) => item.theme === record.theme && item.element === record.element)?.previewImage ?? null;
+}
 
 const showcaseReferenceImages = [
   { src: "/showcase/lotus-coaster-draft.png", alt: "Lotus coaster draft" },
@@ -378,6 +384,7 @@ type CommunityTemplate = {
   meaning: string;
   colors: string[];
   productId: string;
+  previewImage?: string;
 };
 
 type CommunityPost = CommunityTemplate & {
@@ -2906,10 +2913,13 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
   };
 
   const handleRestoreProject = useCallback((record: ProjectRecord, navigateToStudio = true) => {
+    const templatePreview = getImportedTemplatePreview(record);
+    const restoredSourceImageUrl = record.sourceImageUrl ?? templatePreview;
+    const restoredExtractedImageUrl = record.extractedImageUrl ?? templatePreview;
     const restoredStep: StudioStep = record.currentStep
       ?? (record.patternData || record.patternUrl
         ? (record.completed ? "preview" : "pattern")
-        : (record.extractedImageUrl || record.sourceImageUrl ? "extract" : "config"));
+        : (restoredExtractedImageUrl || restoredSourceImageUrl ? "extract" : "config"));
     restoringRef.current = true;
     currentProjectIdRef.current = record.id;
     lastAutoSaveSignatureRef.current = "";
@@ -2932,9 +2942,9 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
     setConnectIslands(record.connectIslands ?? true);
     setSelectedFilter(record.selectedFilter ?? "none");
     setForcedColors(record.forcedColors ?? []);
-    directOutputRef.current = !!record.sourceImageUrl && record.extractedImageUrl === record.sourceImageUrl;
-    setSourceImageUrl(record.sourceImageUrl);
-    setExtractedImageUrl(record.extractedImageUrl);
+    directOutputRef.current = !!restoredSourceImageUrl && restoredExtractedImageUrl === restoredSourceImageUrl;
+    setSourceImageUrl(restoredSourceImageUrl);
+    setExtractedImageUrl(restoredExtractedImageUrl);
     setExtractPrompt(record.extractPrompt ?? null);
     setHighlightedPatternColor(null);
     setSubjectMaskSnapshot(null);
@@ -2946,7 +2956,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
     // 恢复 pattern 对象
     setPattern(deserializePattern(record.patternData));
 
-    setStep((record.patternData || record.patternUrl || record.extractedImageUrl || record.sourceImageUrl) ? restoredStep : "config");
+    setStep((record.patternData || record.patternUrl || restoredExtractedImageUrl || restoredSourceImageUrl) ? restoredStep : "config");
     if (navigateToStudio) setView("start");
   }, [clearResultSubjectSelection, clearSubjectIdentification]);
 
@@ -3191,13 +3201,14 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
     }
 
     const defaults = getProductConfigDefault(post.productId);
+    const previewImage = post.previewImage ?? null;
     const record: ProjectRecord = {
       id: `proj_${Date.now()}`,
       title: `${post.title} · ${L("导入", "Import")}`,
       createdAt: Date.now(),
       updatedAt: Date.now(),
       completed: false,
-      currentStep: "config",
+      currentStep: previewImage ? "extract" : "config",
       theme: post.theme,
       element: post.element,
       meaning: post.meaning,
@@ -3210,8 +3221,8 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
       connectIslands: true,
       selectedFilter: "none",
       forcedColors: post.colors,
-      sourceImageUrl: null,
-      extractedImageUrl: null,
+      sourceImageUrl: previewImage,
+      extractedImageUrl: previewImage,
       extractPrompt: null,
       patternData: null,
       patternUrl: null,
@@ -3540,7 +3551,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
 
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {filteredProjectRecords.map((record) => {
-              const previewUrl = record.patternUrl || record.cleanPatternUrl || record.sourceImageUrl;
+              const previewUrl = record.patternUrl || record.cleanPatternUrl || record.sourceImageUrl || getImportedTemplatePreview(record);
               return (
                 <article key={record.id} className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
                   <button type="button" onClick={() => handleRestoreProject(record)} className="block w-full text-left">
@@ -3638,6 +3649,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {communityPosts.map((post) => {
               const displayPost = displayCommunityPost(post);
+              const previewUrl = post.record?.patternUrl || post.record?.cleanPatternUrl || post.record?.sourceImageUrl || post.previewImage;
               return (
               <button
                 key={post.id}
@@ -3665,9 +3677,9 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                   </div>
                 </div>
                 <div className="mt-4">
-                  {post.record?.patternUrl ? (
+                  {previewUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={post.record.patternUrl} alt={displayPost.title} className="aspect-square w-full rounded-md border border-stone-200 object-contain" />
+                    <img src={previewUrl} alt={displayPost.title} className="aspect-square w-full rounded-md border border-stone-200 object-contain" />
                   ) : (
                     <PatternMiniature colors={post.colors} />
                   )}
@@ -3731,9 +3743,9 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
 
               <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
                 <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
-                  {selectedCommunityPost.record?.patternUrl ? (
+                  {selectedCommunityPost.record?.patternUrl || selectedCommunityPost.record?.cleanPatternUrl || selectedCommunityPost.record?.sourceImageUrl || selectedCommunityPost.previewImage ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={selectedCommunityPost.record.patternUrl} alt={displayPost.title} className="max-h-[560px] w-full object-contain" />
+                    <img src={selectedCommunityPost.record?.patternUrl || selectedCommunityPost.record?.cleanPatternUrl || selectedCommunityPost.record?.sourceImageUrl || selectedCommunityPost.previewImage} alt={displayPost.title} className="max-h-[560px] w-full object-contain" />
                   ) : (
                     <PatternMiniature colors={selectedCommunityPost.colors} />
                   )}
