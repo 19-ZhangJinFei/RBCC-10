@@ -275,7 +275,7 @@ export default function SubjectMaskEditor({
       const maxY = Math.max(selectionBox.start.y, selectionBox.end.y);
       ctx.save();
       ctx.fillStyle = "rgba(143, 29, 33, 0.08)";
-      ctx.strokeStyle = "#8f1d21";
+      ctx.strokeStyle = "#33596a";
       ctx.lineWidth = Math.max(2, Math.round(subject.width / 320));
       ctx.setLineDash([8, 5]);
       ctx.fillRect(minX, minY, maxX - minX, maxY - minY);
@@ -578,7 +578,7 @@ export default function SubjectMaskEditor({
                 type="button"
                 onClick={() => setActiveMode(item.id as MaskMode)}
                 className={`px-3 py-1.5 text-xs font-semibold transition ${
-                  activeMode === item.id ? "bg-[#8f1d21] text-white" : "bg-white text-stone-600 hover:bg-stone-50"
+                  activeMode === item.id ? "bg-[#33596a] text-white" : "bg-white text-stone-600 hover:bg-stone-50"
                 }`}
               >
                 {item.label}
@@ -595,7 +595,7 @@ export default function SubjectMaskEditor({
               value={brushSize}
               onChange={(event) => setBrushSize(Number(event.target.value))}
               disabled={activeMode === "select" || activeMode === "box"}
-              className="w-24 accent-[#8f1d21] disabled:opacity-50"
+              className="w-24 accent-[#33596a] disabled:opacity-50"
             />
             <span className="w-9 tabular-nums">{brushSize}px</span>
           </label>

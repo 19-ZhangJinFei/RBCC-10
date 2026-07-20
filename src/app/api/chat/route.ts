@@ -93,13 +93,9 @@ function localizedError(language: RequestConfig["language"], zh: string, en: str
 
 async function handleTextChat(messages: unknown, config: RequestConfig | undefined) {
   const language = config?.language === "en" ? "en" : "zh";
-  const envApiKey = firstConfiguredValue(process.env.ARK_API_KEY);
-  const userApiKey = firstConfiguredValue(config?.textModelApiKey);
-  const apiKey = config?.useDefaultModel === true ? envApiKey : firstConfiguredValue(userApiKey, envApiKey);
-  const model = config?.useDefaultModel === true
-    ? firstConfiguredValue(process.env.ARK_TEXT_MODEL, process.env.AI_TEXT_MODEL, "doubao-seed-1-6-250615")
-    : firstConfiguredValue(config?.textModelName, process.env.ARK_TEXT_MODEL, process.env.AI_TEXT_MODEL, "doubao-seed-1-6-250615");
-  const baseUrl = firstConfiguredValue(process.env.ARK_BASE_URL, "https://ark.cn-beijing.volces.com/api/v3");
+  const apiKey = firstConfiguredValue(process.env.DEEPSEEK_API_KEY);
+  const model = firstConfiguredValue(process.env.DEEPSEEK_TEXT_MODEL, "deepseek-v4-flash");
+  const baseUrl = firstConfiguredValue(process.env.DEEPSEEK_BASE_URL, "https://api.deepseek.com");
   const normalizedMessages = buildTextMessages(messages);
 
   if (!apiKey) {
@@ -107,8 +103,8 @@ async function handleTextChat(messages: unknown, config: RequestConfig | undefin
       {
         error: localizedError(
           language,
-          "未配置文本模型 API Key。请在个人主页填写文本模型 Key，或开启“使用系统默认模型”。",
-          "Text model API key is not configured. Add a text model key on the profile page or enable the system default model.",
+          "服务端未配置 DEEPSEEK_API_KEY，无法使用文字对话。",
+          "DEEPSEEK_API_KEY is not configured on the server, so text chat is unavailable.",
         ),
       },
       { status: 400 },
@@ -129,6 +125,7 @@ async function handleTextChat(messages: unknown, config: RequestConfig | undefin
     },
     body: JSON.stringify({
       model,
+      thinking: { type: "disabled" },
       messages: [
         {
           role: "system",
@@ -166,13 +163,9 @@ async function handleTextChat(messages: unknown, config: RequestConfig | undefin
 
 async function handleImageGeneration(messages: unknown, config: RequestConfig | undefined) {
   const language = config?.language === "en" ? "en" : "zh";
-  const envApiKey = firstConfiguredValue(process.env.ARK_API_KEY);
-  const userApiKey = firstConfiguredValue(config?.imageModelApiKey);
-  const apiKey = config?.useDefaultModel === true ? envApiKey : firstConfiguredValue(userApiKey, envApiKey);
-  const model = config?.useDefaultModel === true
-    ? firstConfiguredValue(process.env.ARK_IMAGE_MODEL, process.env.AI_IMAGE_MODEL, "doubao-seedream-4-0-250828")
-    : firstConfiguredValue(config?.imageModelName, process.env.ARK_IMAGE_MODEL, process.env.AI_IMAGE_MODEL, "doubao-seedream-4-0-250828");
-  const baseUrl = firstConfiguredValue(process.env.ARK_BASE_URL, "https://ark.cn-beijing.volces.com/api/v3");
+  const apiKey = firstConfiguredValue(process.env.ARK_API_KEY);
+  const model = firstConfiguredValue(process.env.ARK_IMAGE_MODEL, process.env.AI_IMAGE_MODEL, "doubao-seedream-4-0-250828");
+  const baseUrl = firstConfiguredValue(process.env.ARK_BASE_URL, process.env.AI_BASE_URL, "https://ark.cn-beijing.volces.com/api/v3");
   const prompt = getLatestUserPrompt(messages);
 
   if (!apiKey) {
@@ -180,8 +173,8 @@ async function handleImageGeneration(messages: unknown, config: RequestConfig | 
       {
         error: localizedError(
           language,
-          "未配置生图模型 API Key。请在个人主页填写生图模型 Key，或开启“使用系统默认模型”。",
-          "Image model API key is not configured. Add an image model key on the profile page or enable the system default model.",
+          "服务端未配置 ARK_API_KEY，无法使用图像生成功能。",
+          "ARK_API_KEY is not configured on the server, so image generation is unavailable.",
         ),
       },
       { status: 400 },

@@ -208,6 +208,51 @@ function markExternalBackground(
   return result;
 }
 
+function fitForegroundToGrid(grid: MappedPixel[][]): MappedPixel[][] {
+  const marked = markExternalBackground(grid);
+  const height = marked.length;
+  const width = marked[0]?.length ?? 0;
+  if (!height || !width) return marked;
+
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+  marked.forEach((row, y) => row.forEach((cell, x) => {
+    if (!cell.isExternal) {
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+  }));
+  if (maxX < minX || maxY < minY) return marked;
+
+  const sourceMinX = Math.max(0, minX - 1);
+  const sourceMinY = Math.max(0, minY - 1);
+  const sourceMaxX = Math.min(width - 1, maxX + 1);
+  const sourceMaxY = Math.min(height - 1, maxY + 1);
+  const sourceWidth = sourceMaxX - sourceMinX + 1;
+  const sourceHeight = sourceMaxY - sourceMinY + 1;
+  const scale = Math.min((width - 2) / sourceWidth, (height - 2) / sourceHeight);
+  const targetWidth = Math.max(1, Math.round(sourceWidth * scale));
+  const targetHeight = Math.max(1, Math.round(sourceHeight * scale));
+  const offsetX = Math.floor((width - targetWidth) / 2);
+  const offsetY = Math.floor((height - targetHeight) / 2);
+  const result: MappedPixel[][] = Array.from({ length: height }, () =>
+    Array.from({ length: width }, () => ({ ...whiteFallback, color: whiteFallback.hex, isExternal: true })),
+  );
+
+  for (let y = 0; y < targetHeight; y += 1) {
+    for (let x = 0; x < targetWidth; x += 1) {
+      const sourceX = sourceMinX + Math.min(sourceWidth - 1, Math.floor(x * sourceWidth / targetWidth));
+      const sourceY = sourceMinY + Math.min(sourceHeight - 1, Math.floor(y * sourceHeight / targetHeight));
+      result[offsetY + y][offsetX + x] = { ...marked[sourceY][sourceX] };
+    }
+  }
+  return markExternalBackground(result);
+}
+
 const ORTHOGONAL_DIRECTIONS = [[-1, 0], [1, 0], [0, -1], [0, 1]] as const;
 const ALL_DIRECTIONS = [
   [-1, -1], [-1, 0], [-1, 1],
@@ -570,7 +615,7 @@ export function generateSamplePattern(
 
 export async function imageDataUrlToPattern(
   imageUrl: string,
-  options: CulturePromptOptions & { antiAlias: boolean; source: "ai" | "upload"; preserveSourceRatio?: boolean; connectIslands?: boolean },
+  options: CulturePromptOptions & { antiAlias: boolean; source: "ai" | "upload"; preserveSourceRatio?: boolean; connectIslands?: boolean; preserveAllDetails?: boolean; fitForeground?: boolean },
   forcedHexColors: string[] = [],
   filter?: ImageFilter,
 ): Promise<BeadPattern> {
@@ -609,10 +654,11 @@ export async function imageDataUrlToPattern(
     whiteFallback,
     filter,
   );
-  const limited = clampColorCount(grid, options.colorCount, forcedHexColors);
-  const denoised = options.antiAlias ? removeSingleCellNoise(limited) : limited;
-  const cleaned = markExternalBackground(denoised);
-  const connected = options.connectIslands ? connectIslands(cleaned) : cleaned;
+  const fitted = options.fitForeground ? fitForegroundToGrid(grid) : grid;
+  const limited = options.preserveAllDetails ? fitted : clampColorCount(fitted, options.colorCount, forcedHexColors);
+  const denoised = options.preserveAllDetails ? limited : options.antiAlias ? removeSingleCellNoise(limited) : limited;
+  const cleaned = options.preserveAllDetails ? denoised : markExternalBackground(denoised);
+  const connected = options.preserveAllDetails ? cleaned : options.connectIslands ? connectIslands(cleaned) : cleaned;
 
   return {
     grid: connected,

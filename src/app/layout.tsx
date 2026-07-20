@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "豆阁",
-  description: "以AI为笔，将千年纹样织入像素网格，化作可供触摸的豆粒诗篇。",
+  description: "以 AI 为笔，将碧江村的建筑、雕刻与耕读文化织入像素网格。",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#111827",
+  themeColor: "#33596a",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -46,7 +46,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} overflow-x-hidden bg-gray-50 text-gray-900 antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} overflow-x-hidden bg-[#f3efe7] text-[#33596a] antialiased`}
       >
         {children}
         <AppAnalytics />

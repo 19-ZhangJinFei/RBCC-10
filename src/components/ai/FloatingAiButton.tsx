@@ -146,7 +146,7 @@ export default function FloatingAiButton({ onClick }: Props) {
         onClick={handleClick}
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
-        className="fixed z-[150] flex h-14 w-14 cursor-grab items-center justify-center rounded-full bg-[#8f1d21] text-2xl text-white shadow-lg transition hover:bg-[#a52327] hover:shadow-xl active:cursor-grabbing active:scale-95"
+        className="fixed z-[150] flex h-14 w-14 cursor-grab items-center justify-center rounded-full bg-[#33596a] text-2xl text-white shadow-lg transition hover:bg-[#446f80] hover:shadow-xl active:cursor-grabbing active:scale-95"
         style={{
           left: position.x,
           top: position.y,

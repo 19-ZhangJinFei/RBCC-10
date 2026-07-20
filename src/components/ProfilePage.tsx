@@ -30,6 +30,7 @@ import { languageLabel, type AppLanguage } from "@/utils/language";
 type Props = {
   onBack: () => void;
   onRestoreProject: (record: ProjectRecord) => void;
+  onLogin?: (user: StoredUser) => void;
   onLogout?: () => void;
   onApiConfigSaved?: (config: ApiConfig) => void;
   language: AppLanguage;
@@ -39,6 +40,8 @@ type Props = {
 type EnvConfig = {
   configured: boolean;
   baseUrl: string;
+  imageBaseUrl?: string;
+  textBaseUrl?: string;
   defaultImageModel: string;
   defaultTextModel: string;
   defaultVisionModel?: string;
@@ -70,7 +73,7 @@ function loadEnvConfigOnce(): Promise<EnvConfig | null> {
   return envConfigPromise;
 }
 
-export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiConfigSaved, language, onLanguageChange }: Props) {
+export default function ProfilePage({ onBack, onRestoreProject, onLogin, onLogout, onApiConfigSaved, language, onLanguageChange }: Props) {
   const text = {
     backHome: language === "en" ? "Back Home" : "返回首页",
     profileTitle: language === "en" ? "Profile" : "个人主页",
@@ -113,12 +116,13 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
     publishFailed: language === "en" ? "Failed to publish work." : "作品发布失败",
     avatarAlt: language === "en" ? "Avatar" : "头像",
     defaultConfigured: language === "en" ? "System default configuration is active" : "已使用服务端默认配置",
-    baseUrl: language === "en" ? "Base URL" : "接口地址",
+    imageBaseUrl: language === "en" ? "Image/Vision API" : "图像/视觉接口",
+    textBaseUrl: language === "en" ? "Text API" : "纯文本接口",
     defaultTextModel: language === "en" ? "Default text model" : "默认文本模型",
     defaultImageModel: language === "en" ? "Default image model" : "默认图片模型",
     visionModel: language === "en" ? "Vision model" : "主体识别模型",
     notConfiguredSeparately: language === "en" ? "Not separately configured" : "未单独配置",
-    envMissingDetail: language === "en" ? "Server environment keys are missing. Fill in the API keys below." : "服务端未配置环境变量密钥（AI_API_KEY / ARK_API_KEY / OPENAI_API_KEY），请手动填写下方的 API Key。",
+    envMissingDetail: language === "en" ? "The server requires both ARK_API_KEY (image/vision) and DEEPSEEK_API_KEY (text)." : "服务端需要同时配置 ARK_API_KEY（图像/视觉）和 DEEPSEEK_API_KEY（纯文本）。",
     textModel: language === "en" ? "Text Model" : "文本模型",
     imageModel: language === "en" ? "Image Model" : "生图模型",
     visionModelLabel: language === "en" ? "Vision Model" : "图像理解模型",
@@ -275,7 +279,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
         ...prev,
         textModelName: cachedEnvConfig?.defaultTextModel || prev.textModelName,
         imageModelName: cachedEnvConfig?.defaultImageModel || prev.imageModelName,
-        visionModelName: cachedEnvConfig?.defaultVisionModel || cachedEnvConfig?.defaultTextModel || prev.visionModelName,
+        visionModelName: cachedEnvConfig?.defaultVisionModel || prev.visionModelName,
       }));
       return;
     }
@@ -290,7 +294,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
           ...prev,
           textModelName: data?.defaultTextModel || prev.textModelName,
           imageModelName: data?.defaultImageModel || prev.imageModelName,
-          visionModelName: data?.defaultVisionModel || data?.defaultTextModel || prev.visionModelName,
+          visionModelName: data?.defaultVisionModel || prev.visionModelName,
         }));
       })
       .finally(() => {
@@ -366,10 +370,11 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
   const handleLoggedIn = useCallback((user: StoredUser) => {
     const nextUser = { ...user, skillLevel: user.skillLevel ?? loadUserSkillLevel() };
     setProfile(nextUser);
+    onLogin?.(nextUser);
     saveUserSkillLevel(nextUser.skillLevel ?? DEFAULT_USER_SKILL_LEVEL);
     void refreshHistory();
     setShowLoginModal(false);
-  }, [refreshHistory]);
+  }, [onLogin, refreshHistory]);
 
   const confirmLogout = useCallback(() => {
     logoutUser();
@@ -384,8 +389,8 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
   }, [onLogout, refreshHistory]);
 
   return (
-    <main className="min-h-screen bg-[#f8f5ef] text-stone-950">
-      <header className="sticky top-0 z-50 border-b border-stone-200/80 bg-[#fffdf7]/95 backdrop-blur">
+    <main className="min-h-screen bg-[#f3efe7] text-stone-950">
+      <header className="sticky top-0 z-50 border-b border-stone-200/80 bg-[#f3efe7]/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <button type="button" onClick={onBack} className="flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-950">
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
@@ -403,7 +408,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
               <h2 className="text-xl font-semibold">{text.languageTitle}</h2>
               <p className="mt-1 text-sm text-stone-500">{text.languageDesc}</p>
             </div>
-            <div className="inline-flex rounded-lg border border-[#8f1d21]/25 bg-[#8f1d21]/8 p-1">
+            <div className="inline-flex rounded-lg border border-[#33596a]/25 bg-[#33596a]/8 p-1">
               {(["zh", "en"] as AppLanguage[]).map((item) => {
                 const selected = language === item;
                 return (
@@ -412,7 +417,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
                     type="button"
                     onClick={() => onLanguageChange(item)}
                     className={`rounded-md px-4 py-2 text-sm font-semibold transition ${
-                      selected ? "bg-[#8f1d21] text-white shadow-sm" : "text-[#8f1d21] hover:bg-white"
+                      selected ? "bg-[#33596a] text-white shadow-sm" : "text-[#33596a] hover:bg-white"
                     }`}
                   >
                     {languageLabel(item)}
@@ -448,7 +453,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
               </div>
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
               <div className="mt-2 flex justify-center gap-2">
-                <button type="button" onClick={() => fileInputRef.current?.click()} className="text-xs font-medium text-[#8f1d21] hover:underline">{text.change}</button>
+                <button type="button" onClick={() => fileInputRef.current?.click()} className="text-xs font-medium text-[#33596a] hover:underline">{text.change}</button>
                 {profile.avatarUrl && (
                   <button type="button" onClick={removeAvatar} className="text-xs font-medium text-stone-400 hover:text-red-600 hover:underline">{text.remove}</button>
                 )}
@@ -465,13 +470,13 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
                     onKeyDown={(e) => { if (e.key === "Enter") saveNickname(); if (e.key === "Escape") { setNicknameDraft(profile.nickname); setNicknameEditing(false); } }}
                     autoFocus
                   />
-                  <button type="button" onClick={saveNickname} className="text-sm font-semibold text-[#8f1d21]">{text.save}</button>
+                  <button type="button" onClick={saveNickname} className="text-sm font-semibold text-[#33596a]">{text.save}</button>
                   <button type="button" onClick={() => { setNicknameDraft(profile.nickname); setNicknameEditing(false); }} className="text-sm text-stone-500">{text.cancel}</button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
                   <span className="text-lg font-semibold">{profile.nickname}</span>
-                  <button type="button" onClick={() => { setNicknameDraft(profile.nickname); setNicknameEditing(true); }} className="text-sm text-stone-400 hover:text-[#8f1d21]">✎ {text.edit}</button>
+                  <button type="button" onClick={() => { setNicknameDraft(profile.nickname); setNicknameEditing(true); }} className="text-sm text-stone-400 hover:text-[#33596a]">✎ {text.edit}</button>
                 </div>
               )}
               <p className="mt-1 text-xs text-stone-400">{text.avatarHint}</p>
@@ -494,8 +499,8 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
                       onClick={() => handleSkillLevelChange(option.id)}
                       className={`rounded-md border px-4 py-3 text-left transition ${
                         selected
-                          ? "border-[#8f1d21] bg-[#8f1d21] text-white shadow-sm"
-                          : "border-stone-200 bg-stone-50 text-stone-700 hover:border-[#8f1d21]/40 hover:bg-white"
+                          ? "border-[#33596a] bg-[#33596a] text-white shadow-sm"
+                          : "border-stone-200 bg-stone-50 text-stone-700 hover:border-[#33596a]/40 hover:bg-white"
                       }`}
                     >
                       <span className="block text-sm font-semibold">{language === "en" ? option.en : option.zh}</span>
@@ -543,10 +548,11 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
             <div className="mt-4 rounded-md border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-800">
               <p className="font-medium">✓ {text.defaultConfigured}</p>
               <ul className="mt-1 space-y-1 text-xs text-emerald-700">
-                {envConfig.baseUrl && <li>{text.baseUrl}: <code className="rounded bg-emerald-100 px-1">{envConfig.baseUrl}</code></li>}
+                {(envConfig.imageBaseUrl || envConfig.baseUrl) && <li>{text.imageBaseUrl}: <code className="rounded bg-emerald-100 px-1">{envConfig.imageBaseUrl || envConfig.baseUrl}</code></li>}
+                {envConfig.textBaseUrl && <li>{text.textBaseUrl}: <code className="rounded bg-emerald-100 px-1">{envConfig.textBaseUrl}</code></li>}
                 {envConfig.defaultTextModel && <li>{text.defaultTextModel}: <code className="rounded bg-emerald-100 px-1">{envConfig.defaultTextModel}</code></li>}
                 {envConfig.defaultImageModel && <li>{text.defaultImageModel}: <code className="rounded bg-emerald-100 px-1">{envConfig.defaultImageModel}</code></li>}
-                <li>{text.visionModel}: <code className="rounded bg-emerald-100 px-1">{envConfig.defaultVisionModel || envConfig.defaultTextModel || text.notConfiguredSeparately}</code></li>
+                <li>{text.visionModel}: <code className="rounded bg-emerald-100 px-1">{envConfig.defaultVisionModel || text.notConfiguredSeparately}</code></li>
               </ul>
             </div>
           ) : apiConfig.useDefaultModel && !envLoading ? (
@@ -579,7 +585,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
                   {!apiConfig.textModelApiKey && currentTextOption?.purchaseUrl && (
                     <p className="mt-1.5 text-xs text-stone-400">
                       {text.noApiKey}
-                      <a href={currentTextOption.purchaseUrl} target="_blank" rel="noopener noreferrer" className="mx-1 font-medium text-[#8f1d21] underline hover:text-[#a52327]">{text.officialSite}</a>
+                      <a href={currentTextOption.purchaseUrl} target="_blank" rel="noopener noreferrer" className="mx-1 font-medium text-[#33596a] underline hover:text-[#446f80]">{text.officialSite}</a>
                     </p>
                   )}
                 </>
@@ -608,7 +614,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
                   {!apiConfig.imageModelApiKey && currentImageOption?.purchaseUrl && (
                     <p className="mt-1.5 text-xs text-stone-400">
                       {text.noApiKey}
-                      <a href={currentImageOption.purchaseUrl} target="_blank" rel="noopener noreferrer" className="mx-1 font-medium text-[#8f1d21] underline hover:text-[#a52327]">{text.officialSite}</a>
+                      <a href={currentImageOption.purchaseUrl} target="_blank" rel="noopener noreferrer" className="mx-1 font-medium text-[#33596a] underline hover:text-[#446f80]">{text.officialSite}</a>
                     </p>
                   )}
                 </>
@@ -642,7 +648,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
                   {!apiConfig.visionModelApiKey && currentVisionOption?.purchaseUrl && (
                     <p className="mt-1.5 text-xs text-stone-400">
                       {text.noApiKey}
-                      <a href={currentVisionOption.purchaseUrl} target="_blank" rel="noopener noreferrer" className="mx-1 font-medium text-[#8f1d21] underline hover:text-[#a52327]">{text.officialSite}</a>
+                      <a href={currentVisionOption.purchaseUrl} target="_blank" rel="noopener noreferrer" className="mx-1 font-medium text-[#33596a] underline hover:text-[#446f80]">{text.officialSite}</a>
                     </p>
                   )}
                 </>
@@ -668,7 +674,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
             </label>
           </div>
           <div className="mt-4 flex items-center gap-3">
-            <button type="button" onClick={handleSaveApi} className="rounded-md bg-[#8f1d21] px-4 py-2 text-sm font-semibold text-white">{text.saveConfig}</button>
+            <button type="button" onClick={handleSaveApi} className="rounded-md bg-[#33596a] px-4 py-2 text-sm font-semibold text-white">{text.saveConfig}</button>
             {saved && <span className="text-sm text-emerald-600">✓ {text.savedLocal}</span>}
           </div>
         </section>
@@ -714,7 +720,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
                   </label>
                   <span className="text-xs text-stone-400">{text.selectedCount} {selectedIds.size} / {history.length}</span>
                   <div className="ml-auto flex gap-2">
-                    <button type="button" onClick={batchExport} disabled={selectedIds.size === 0} className="rounded-md bg-[#8f1d21] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50">📦 {text.batchExport}</button>
+                    <button type="button" onClick={batchExport} disabled={selectedIds.size === 0} className="rounded-md bg-[#33596a] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50">📦 {text.batchExport}</button>
                     <button type="button" onClick={batchDelete} disabled={selectedIds.size === 0} className="rounded-md border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-700 disabled:opacity-50">🗑️ {text.batchDelete}</button>
                   </div>
                 </div>
@@ -760,7 +766,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
                 <button
                   type="button"
                   onClick={() => setShowLoginModal(true)}
-                  className="rounded-md bg-[#8f1d21] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#a52327]"
+                  className="rounded-md bg-[#33596a] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#446f80]"
                 >
                   {text.loginRegister}
                 </button>
@@ -781,7 +787,7 @@ export default function ProfilePage({ onBack, onRestoreProject, onLogout, onApiC
               <button
                 type="button"
                 onClick={confirmLogout}
-                className="rounded-md bg-[#8f1d21] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#a82428]"
+                className="rounded-md bg-[#33596a] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#446f80]"
               >
                 {text.confirmLogout}
               </button>
@@ -829,15 +835,15 @@ function ProjectCard({ record, selected, onToggleSelect, onRestore, onExport, on
   const previewUrl = record.mockupUrl || record.patternUrl || record.cleanPatternUrl || record.extractedImageUrl || record.sourceImageUrl;
   return (
     <div className={`group relative rounded-lg border p-3 transition ${
-      selected ? "border-[#8f1d21] ring-2 ring-[#8f1d21]/30 bg-[#8f1d21]/5" : "border-stone-200 bg-stone-50 hover:border-stone-400"
+      selected ? "border-[#33596a] ring-2 ring-[#33596a]/30 bg-[#33596a]/5" : "border-stone-200 bg-stone-50 hover:border-stone-400"
     }`}>
       {onToggleSelect && (
         <div
           className="absolute left-2 top-2 z-10 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border-2 bg-white"
-          style={{ borderColor: selected ? '#8f1d21' : '#d6d3d1' }}
+          style={{ borderColor: selected ? '#33596a' : '#d6d3d1' }}
           onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
         >
-          {selected && <svg className="h-3 w-3 text-[#8f1d21]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
+          {selected && <svg className="h-3 w-3 text-[#33596a]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
         </div>
       )}
       <div className="aspect-video overflow-hidden rounded-md border border-stone-200 bg-white" onClick={onToggleSelect || onRestore}>

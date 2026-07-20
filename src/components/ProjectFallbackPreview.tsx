@@ -7,7 +7,7 @@ type ProjectFallbackPreviewProps = {
   language?: "zh" | "en";
 };
 
-const DEFAULT_COLORS = ["#F8F1E4", "#8F1D21", "#D6A23A", "#315B52", "#25211E"];
+const DEFAULT_COLORS = ["#F8F1E4", "#33596A", "#D6A23A", "#315B52", "#25211E"];
 
 function buildColorCells(colors: string[], seedText: string): string[] {
   const seed = Array.from(seedText).reduce((total, character) => total + (character.codePointAt(0) ?? 0), 0);

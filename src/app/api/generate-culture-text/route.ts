@@ -47,18 +47,8 @@ function formatSubjectIdentification(identification: SubjectIdentification | und
 export async function POST(req: Request) {
   const body = await req.json();
   const language = body.language === "en" ? "en" : "zh";
-  const apiKey = process.env.ARK_API_KEY;
-  const baseUrl = process.env.ARK_BASE_URL ?? "https://ark.cn-beijing.volces.com/api/v3";
-  const model = process.env.ARK_TEXT_MODEL ?? process.env.AI_TEXT_MODEL ?? "doubao-seed-1-6-250615";
   const subjectIdentification = body.subjectIdentification as SubjectIdentification | undefined;
   const promptOverride = typeof body.prompt === "string" ? body.prompt.trim() : "";
-
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "服务端未配置 ARK_API_KEY，无法调用 AI 文案接口。" },
-      { status: 500 },
-    );
-  }
 
   const generatedPrompt = language === "en" ? `Generate a work introduction for a Chinese cultural bead-art product based only on the visible subject, colors, composition, style, and the editable subject identification below.
 
@@ -115,6 +105,25 @@ ${formatSubjectIdentification(subjectIdentification)}
     typeof rawImageUrl === "string" && rawImageUrl.length > 0
       ? await compactDataUrl(rawImageUrl)
       : null;
+  const usesVision = Boolean(compactImageUrl);
+  const apiKey = usesVision ? process.env.ARK_API_KEY : process.env.DEEPSEEK_API_KEY;
+  const baseUrl = usesVision
+    ? process.env.ARK_BASE_URL ?? process.env.AI_BASE_URL ?? "https://ark.cn-beijing.volces.com/api/v3"
+    : process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com";
+  const model = usesVision
+    ? process.env.ARK_VISION_MODEL ?? process.env.AI_VISION_MODEL ?? "doubao-vision-lite-32k-241015"
+    : process.env.DEEPSEEK_TEXT_MODEL ?? "deepseek-v4-flash";
+
+  if (!apiKey) {
+    return NextResponse.json(
+      {
+        error: usesVision
+          ? "服务端未配置 ARK_API_KEY，无法分析参考图像。"
+          : "服务端未配置 DEEPSEEK_API_KEY，无法生成纯文本文案。",
+      },
+      { status: 500 },
+    );
+  }
   const finalTextConstraint = language === "en"
     ? `Final check: the product must be "${body.product}". The title must directly include "${body.product}" and use English only.`
     : `最终检查：产品必须是“${body.product}”。title 必须直接包含“${body.product}”，不得使用“拼豆画”或其他产品词替代“${body.product}”。`;
@@ -134,6 +143,7 @@ ${formatSubjectIdentification(subjectIdentification)}
     },
     body: JSON.stringify({
       model,
+      ...(!usesVision ? { thinking: { type: "disabled" } } : {}),
       messages: [
         {
           role: "system",

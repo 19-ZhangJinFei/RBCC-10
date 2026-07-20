@@ -1,13 +1,23 @@
-﻿export type CultureTheme = {
+import {
+  bijiangElementGroups,
+  bijiangElementMeanings,
+  bijiangElementStructures,
+  bijiangElements,
+  cultureThemes as bijiangCultureThemes,
+} from "@/data/bijiangCulture";
+
+export type CultureTheme = {
   id: string;
   name: string;
   elements: string[];
   colors: string[];
   paletteHints: string[];
   meaning: string;
+  elementMeanings?: Record<string, string>;
+  elementStructures?: Record<string, string>;
 };
 
-export const cultureThemes: CultureTheme[] = [
+const traditionalCultureThemes: CultureTheme[] = [
   {
     id: "dunhuang",
     name: "敦煌文化",
@@ -240,6 +250,13 @@ export const cultureThemes: CultureTheme[] = [
     paletteHints: ["#F8F5EC", "#111111", "#B51D1A", "#5B7F5A", "#D6C6A8"],
     meaning: "诗词书法以文字气韵、印章和文房器物为核心，适合转化为简洁符号、书签和研学文创。",
   },
+];
+
+export { bijiangElementGroups, bijiangElementMeanings, bijiangElementStructures, bijiangElements };
+
+export const cultureThemes: CultureTheme[] = [
+  ...bijiangCultureThemes,
+  ...traditionalCultureThemes,
 ];
 
 export function getThemeById(id: string): CultureTheme {

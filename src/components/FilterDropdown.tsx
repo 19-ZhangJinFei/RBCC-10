@@ -73,7 +73,7 @@ export default function FilterDropdown({ value, onChange, language = "zh" }: Pro
       <button
         type="button"
         onClick={handleToggle}
-        className="flex items-center gap-1.5 rounded-md border border-[#8f1d21] bg-[#8f1d21] px-2.5 py-1.5 text-sm text-white transition hover:bg-[#a82428] whitespace-nowrap"
+        className="flex items-center gap-1.5 rounded-md border border-[#33596a] bg-[#33596a] px-2.5 py-1.5 text-sm text-white transition hover:bg-[#446f80] whitespace-nowrap"
       >
         <span>{language === "en" ? filterNameEn[selected.key] : selected.name}</span>
       </button>
@@ -104,7 +104,7 @@ export default function FilterDropdown({ value, onChange, language = "zh" }: Pro
                 }`}
               >
                 <span className="flex-1">{language === "en" ? filterNameEn[f.key] : f.name}</span>
-                {f.key === value && <span className="text-xs text-[#8f1d21]">{language === "en" ? "Selected" : "已选"}</span>}
+                {f.key === value && <span className="text-xs text-[#33596a]">{language === "en" ? "Selected" : "已选"}</span>}
               </button>
             ))}
           </div>

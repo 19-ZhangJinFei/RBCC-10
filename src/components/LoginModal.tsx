@@ -59,7 +59,7 @@ export default function LoginModal({ onClose, onLoggedIn, initialStep, language 
   }, [username, L, onLoggedIn, onClose]);
 
   const handleRegister = useCallback(() => {
-    const effectiveUsername = username.trim() || nickname.trim();
+    const effectiveUsername = username.trim();
     if (!effectiveUsername) {
       setError(L("请输入用户名", "Please enter a username"));
       return;
@@ -124,11 +124,11 @@ export default function LoginModal({ onClose, onLoggedIn, initialStep, language 
         {/* 步骤指示 */}
         <div className="mb-5 flex items-center gap-2">
           <div
-            className={`h-2 w-2 rounded-full ${step === "login" ? "bg-[#8f1d21]" : "bg-stone-300"}`}
+            className={`h-2 w-2 rounded-full ${step === "login" ? "bg-[#33596a]" : "bg-stone-300"}`}
           />
           <div className="h-px flex-1 bg-stone-200" />
           <div
-            className={`h-2 w-2 rounded-full ${step === "register" ? "bg-[#8f1d21]" : "bg-stone-300"}`}
+            className={`h-2 w-2 rounded-full ${step === "register" ? "bg-[#33596a]" : "bg-stone-300"}`}
           />
         </div>
 
@@ -146,7 +146,7 @@ export default function LoginModal({ onClose, onLoggedIn, initialStep, language 
                 value={username}
                 onChange={(e) => { setUsername(e.target.value); setError(""); }}
                 placeholder={L("输入用户名", "Enter username")}
-                className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2.5 text-sm focus:border-[#8f1d21] focus:outline-none focus:ring-1 focus:ring-[#8f1d21]"
+                className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2.5 text-sm focus:border-[#33596a] focus:outline-none focus:ring-1 focus:ring-[#33596a]"
                 autoFocus
               />
             </div>
@@ -165,7 +165,7 @@ export default function LoginModal({ onClose, onLoggedIn, initialStep, language 
                 type="button"
                 onClick={handleLogin}
                 disabled={loading}
-                className="flex-1 rounded-md bg-[#8f1d21] py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                className="flex-1 rounded-md bg-[#33596a] py-2.5 text-sm font-semibold text-white disabled:opacity-60"
               >
                 {loading ? L("验证中...", "Checking...") : L("下一步", "Next")}
               </button>
@@ -173,7 +173,7 @@ export default function LoginModal({ onClose, onLoggedIn, initialStep, language 
 
             <p className="mt-4 text-center text-sm text-stone-500">
               {L("还没有账号？", "No account yet?")}
-              <button type="button" onClick={() => { const randomName = generateRandomNickname(); setUsername(username.trim() || randomName); setNickname(username.trim() || randomName); setStep("register"); setError(""); }} className="ml-1 font-medium text-[#8f1d21] hover:underline">
+              <button type="button" onClick={() => { const randomName = generateRandomNickname(); setUsername(username.trim() || randomName); setNickname(username.trim() || randomName); setStep("register"); setError(""); }} className="ml-1 font-medium text-[#33596a] hover:underline">
                 {L("立即注册", "Register now")}
               </button>
             </p>
@@ -184,10 +184,23 @@ export default function LoginModal({ onClose, onLoggedIn, initialStep, language 
         {step === "register" && (
           <>
             <h2 className="text-xl font-semibold">{L("注册新用户", "Register New User")}</h2>
-            <p className="mt-1 text-sm text-stone-500">{L("用户名", "Username")} <strong>{username}</strong> {L("尚未注册，请完善以下信息。", "is not registered. Complete the details below.")}</p>
+            <p className="mt-1 text-sm text-stone-500">{L("请设置用户名并完善以下信息。", "Choose a username and complete the details below.")}</p>
+
+            {/* 用户名 */}
+            <div className="mt-5">
+              <label className="text-sm font-medium">{L("用户名", "Username")}</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => { setUsername(e.target.value); setError(""); }}
+                placeholder={L("输入用户名", "Enter username")}
+                className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2.5 text-sm focus:border-[#33596a] focus:outline-none focus:ring-1 focus:ring-[#33596a]"
+                autoFocus
+              />
+            </div>
 
             {/* 头像选择 */}
-            <div className="mt-5">
+            <div className="mt-4">
               <label className="text-sm font-medium">{L("头像", "Avatar")}</label>
               <div className="mt-2 flex items-center gap-4">
                 {/* 当前头像预览 */}
@@ -231,7 +244,7 @@ export default function LoginModal({ onClose, onLoggedIn, initialStep, language 
                     onClick={() => { setAvatarEmoji(emoji); setUploadedAvatar(null); }}
                     className={`grid h-8 w-8 place-items-center rounded-full text-lg transition ${
                       !uploadedAvatar && avatarEmoji === emoji
-                        ? "ring-2 ring-[#8f1d21] ring-offset-2"
+                        ? "ring-2 ring-[#33596a] ring-offset-2"
                         : "hover:bg-stone-100"
                     }`}
                   >
@@ -250,8 +263,7 @@ export default function LoginModal({ onClose, onLoggedIn, initialStep, language 
                   value={nickname}
                   onChange={(e) => { setNickname(e.target.value); setError(""); }}
                   placeholder={L("输入昵称", "Enter nickname")}
-                  className="flex-1 rounded-md border border-stone-300 px-3 py-2.5 text-sm focus:border-[#8f1d21] focus:outline-none focus:ring-1 focus:ring-[#8f1d21]"
-                  autoFocus
+                  className="flex-1 rounded-md border border-stone-300 px-3 py-2.5 text-sm focus:border-[#33596a] focus:outline-none focus:ring-1 focus:ring-[#33596a]"
                 />
                 <button
                   type="button"
@@ -278,7 +290,7 @@ export default function LoginModal({ onClose, onLoggedIn, initialStep, language 
                 type="button"
                 onClick={handleRegister}
                 disabled={loading}
-                className="flex-1 rounded-md bg-[#8f1d21] py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                className="flex-1 rounded-md bg-[#33596a] py-2.5 text-sm font-semibold text-white disabled:opacity-60"
               >
                 {loading ? L("注册中...", "Registering...") : L("完成注册", "Finish")}
               </button>

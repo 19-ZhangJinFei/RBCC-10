@@ -8,15 +8,21 @@ export const runtime = "nodejs";
  * 供前端 ProfilePage 在"使用默认模型"模式下展示
  */
 export async function GET() {
-  const apiKeyExists = Boolean(process.env.ARK_API_KEY);
-  const baseUrl = process.env.ARK_BASE_URL ?? "https://ark.cn-beijing.volces.com/api/v3";
+  const arkConfigured = Boolean(process.env.ARK_API_KEY);
+  const deepSeekConfigured = Boolean(process.env.DEEPSEEK_API_KEY);
+  const imageBaseUrl = process.env.ARK_BASE_URL ?? process.env.AI_BASE_URL ?? "https://ark.cn-beijing.volces.com/api/v3";
+  const textBaseUrl = process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com";
   const imageModel = process.env.ARK_IMAGE_MODEL ?? process.env.AI_IMAGE_MODEL ?? "";
-  const textModel = process.env.ARK_TEXT_MODEL ?? process.env.AI_TEXT_MODEL ?? "";
+  const textModel = process.env.DEEPSEEK_TEXT_MODEL ?? "deepseek-v4-flash";
   const visionModel = process.env.ARK_VISION_MODEL ?? process.env.AI_VISION_MODEL ?? "";
 
   return NextResponse.json({
-    configured: apiKeyExists,
-    baseUrl: baseUrl,
+    configured: arkConfigured && deepSeekConfigured,
+    arkConfigured,
+    deepSeekConfigured,
+    baseUrl: imageBaseUrl,
+    imageBaseUrl,
+    textBaseUrl,
     defaultImageModel: imageModel,
     defaultTextModel: textModel,
     defaultVisionModel: visionModel,

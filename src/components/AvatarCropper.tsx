@@ -194,7 +194,7 @@ export default function AvatarCropper({ file, onSave, onCancel }: Props) {
             step={0.01}
             value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))}
-            className="flex-1 accent-[#8f1d21]"
+            className="flex-1 accent-[#33596a]"
           />
           <span className="text-xs font-medium text-stone-400">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -214,7 +214,7 @@ export default function AvatarCropper({ file, onSave, onCancel }: Props) {
           <button
             type="button"
             onClick={handleSave}
-            className="flex-1 rounded-lg bg-[#8f1d21] py-2.5 text-sm font-medium text-white transition hover:bg-[#a52327] active:scale-[0.98]"
+            className="flex-1 rounded-lg bg-[#33596a] py-2.5 text-sm font-medium text-white transition hover:bg-[#446f80] active:scale-[0.98]"
           >
             保存
           </button>

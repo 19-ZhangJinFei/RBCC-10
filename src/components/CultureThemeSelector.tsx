@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { cultureThemes } from "@/data/cultureThemes";
 import { productTemplates } from "@/data/productTemplates";
@@ -82,7 +82,7 @@ export default function CultureThemeSelector({
                 onClick={() => onElementChange(item)}
                 className={`rounded-full border px-3 py-1 text-xs transition ${
                   element === item
-                    ? "border-[#8f1d21] bg-[#8f1d21] text-white"
+                    ? "border-[#33596a] bg-[#33596a] text-white"
                     : "border-slate-200 bg-white text-slate-600 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                 }`}
               >

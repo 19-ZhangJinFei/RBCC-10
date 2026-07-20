@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CultureExplanation from "@/components/CultureExplanation";
+import BijiangCheckIn from "@/components/BijiangCheckIn";
 import FilterDropdown from "@/components/FilterDropdown";
 import ProfilePage from "@/components/ProfilePage";
 import SubjectMaskEditor, { type MaskMode } from "@/components/SubjectMaskEditor";
@@ -18,7 +19,8 @@ import type { ProjectRecord } from "@/types/projectTypes";
 import type { CommunityPost as CloudCommunityPost } from "@/types/community";
 import type { SubjectIdentification } from "@/types/subjectIdentification";
 import { type AspectRatioId, aspectRatios } from "@/data/aspectRatios";
-import { cultureThemes } from "@/data/cultureThemes";
+import { bijiangElementGroups, cultureThemes } from "@/data/cultureThemes";
+import { bijiangAsset } from "@/data/bijiangAssets";
 import { getProductTemplate } from "@/data/productTemplates";
 import { countBeads, type BeadCount } from "@/utils/countBeads";
 import { buildKit, type Kit } from "@/utils/buildKit";
@@ -164,16 +166,17 @@ function deserializePattern(raw: string | null): BeadPattern | null {
 const navItems: { id: SiteView; zh: string; en: string }[] = [
   { id: "home", zh: "首页", en: "Home" },
   { id: "start", zh: "创作", en: "Create" },
+  { id: "checkin", zh: "碧江打卡", en: "Check In" },
   { id: "projects", zh: "项目", en: "Projects" },
   { id: "ai", zh: "豆阁AI", en: "Doge AI" },
   { id: "community", zh: "论坛", en: "Forum" },
   { id: "faq", zh: "帮助", en: "Help" },
 ];
 const studioSteps: { id: StudioStep; label: string; desc: string }[] = [
-  { id: "config", label: "配置", desc: "选择传统主题、作品形式、网格尺寸、颜色数量和可用色" },
+  { id: "config", label: "配置", desc: "选择碧江或传统主题、作品形式、网格尺寸、颜色数量和可用色" },
   { id: "extract", label: "主体提取与再创作", desc: "提取图片核心主体意象，展示颜色占比，并基于主体图进行文化风格再创作" },
   { id: "pattern", label: "拼豆图纸", desc: "像素化处理、自动移除轮廓外浅色杂块以节省拼豆用量、生成带色号网格并统计用量" },
-  { id: "preview", label: "制作方案", desc: "根据拼豆图纸生成材料、工具、拼豆、熨烫步骤和导出资料" },
+  { id: "preview", label: "制作方案", desc: "汇总成本、用时、采购、难度、导出与文化说明" },
 ];
 
 const formLabels = [
@@ -202,6 +205,11 @@ const studioStepEn: Record<StudioStep, { label: string; desc: string }> = {
 };
 
 const themeEn: Record<string, { name: string; meaning: string; elements: Record<string, string> }> = {
+  bijiang_village: {
+    name: "Bijiang Village",
+    meaning: "Bijiang Village brings together Cantonese carving crafts, ancestral halls, traditional academies, farming-and-reading culture, and Chinese-Western architecture.",
+    elements: {},
+  },
   dunhuang: { name: "Dunhuang Culture", meaning: "Dunhuang culture blends Buddhist art, Silk Road civilization, and Chinese ornament, making it suitable for high-contrast bead patterns.", elements: { "飞天": "Flying Apsaras", "藻井": "Caisson Ceiling", "祥云": "Auspicious Clouds", "莲花纹": "Lotus Pattern", "九色鹿": "Nine-Colored Deer" } },
   blue_porcelain: { name: "Blue-and-White Porcelain", meaning: "Blue-and-white porcelain expresses Chinese ceramic aesthetics through crisp blue-white contrast and elegant ornament.", elements: { "莲花": "Lotus", "缠枝纹": "Scroll Pattern", "云纹": "Cloud Pattern", "瓷瓶": "Porcelain Vase", "海水纹": "Wave Pattern" } },
   opera_mask: { name: "Peking Opera Masks", meaning: "Peking opera masks use color to symbolize character and theatrical culture, ideal for symmetrical bead designs.", elements: { "关羽": "Guan Yu", "张飞": "Zhang Fei", "曹操": "Cao Cao", "包拯": "Bao Zheng", "对称脸谱": "Symmetric Mask" } },
@@ -258,44 +266,44 @@ function getProductConfigDefault(productId: string): ProductConfigDefault {
 
 const showcase = [
   {
-    title: "青花莲纹",
-    theme: "青花瓷",
-    element: "莲花",
-    meaning: "以青花瓷蓝白配色表现莲花的清雅与洁净，适合转译为轮廓简洁、留白明确的杯垫底稿。",
-    colors: ["#FFFFFF", "#1557A8", "#3677D2", "#CDE8FF"],
-    previewImage: "/showcase/lotus-coaster-draft.png",
+    title: "金楼金箔木雕",
+    theme: "碧江村",
+    element: "金箔木雕",
+    meaning: "从碧江金楼的金箔木雕中提取花鸟、人物与吉祥纹样，转译为古雅精致的拼豆图案。",
+    colors: ["#F3EFE7", "#33596A", "#B57938"],
+    previewImage: bijiangAsset("金楼内部装饰.jpg"),
   },
   {
-    title: "敦煌飞天",
-    theme: "敦煌",
-    element: "飞天",
-    meaning: "提取敦煌飞天的飘带、乐舞和壁画色彩，以土黄、赭红与青绿构成具有丝路气息的装饰图案。",
-    colors: ["#FCF9E0", "#EDB045", "#943630", "#0B3C43"],
-    previewImage: "/showcase/feitian-coaster-draft.png",
+    title: "砖雕大照壁",
+    theme: "碧江村",
+    element: "砖雕（戏剧人物、吉祥图案）",
+    meaning: "以碧江村砖雕大照壁为灵感，凝练戏剧人物与吉祥图案的层次和轮廓。",
+    colors: ["#F3EFE7", "#33596A", "#B57938"],
+    previewImage: bijiangAsset("砖雕大照壁.jpg"),
   },
   {
-    title: "宫墙龙纹",
-    theme: "故宫宫廷纹样",
-    element: "宫墙",
-    meaning: "故宫宫廷纹样体现皇家建筑、礼制色彩与吉祥纹饰，适合庄重、华丽、纪念品风格的设计。",
-    colors: ["#8F1D21", "#F2C94C", "#1B4F9C", "#D6A23A", "#F8E8C8"],
-    previewImage: "/showcase/forbidden-city-dragon-draft.png",
+    title: "镬耳山墙",
+    theme: "碧江村",
+    element: "镬耳山墙",
+    meaning: "提取广府镬耳山墙的高耸曲线和建筑秩序，形成具有岭南辨识度的文创图案。",
+    colors: ["#F3EFE7", "#33596A", "#B57938"],
+    previewImage: bijiangAsset("金楼.png"),
   },
   {
-    title: "山海瑞兽",
-    theme: "山海经",
-    element: "瑞兽",
-    meaning: "围绕山海经瑞兽意象组织羽翼、山纹与日月符号，用墨黑、朱红、青绿和金黄形成神话感轮廓。",
-    colors: ["#1D1414", "#D30022", "#166F41", "#FFC830"],
-    previewImage: "/showcase/auspicious-beast-coaster-draft.png",
+    title: "祠堂耕读",
+    theme: "碧江村",
+    element: "耕读文化",
+    meaning: "围绕碧江祠堂、书塾和耕读传统组织文化意象，表达饮水思源与诗礼传家的精神。",
+    colors: ["#F3EFE7", "#33596A", "#B57938"],
+    previewImage: bijiangAsset("慕堂苏公祠.jpg"),
   },
 ];
 
 const communityTemplates: CommunityTemplate[] = showcase.map((item, index) => ({
   id: `template_${index}`,
   title: item.title,
-  author: ["青瓷手作", "敦煌拾色", "宫墙手作", "山海造物"][index] ?? "豆阁工坊",
-  avatar: ["青", "敦", "宫", "山"][index] ?? "豆",
+  author: ["金楼拾光", "碧江砖韵", "岭南筑影", "耕读工坊"][index] ?? "豆阁工坊",
+  avatar: ["金", "砖", "镬", "耕"][index] ?? "豆",
   createdAt: Date.UTC(2026, 4, 19 - index, 2, 0, 0),
   theme: item.theme,
   element: item.element,
@@ -311,23 +319,18 @@ function getImportedTemplatePreview(record: ProjectRecord): string | null {
 }
 
 const showcaseReferenceImages = [
-  { src: "/showcase/lotus-coaster-draft.png", alt: "Lotus coaster draft" },
-  { src: "/showcase/feitian-coaster-draft.png", alt: "Feitian coaster draft" },
-  { src: "/showcase/forbidden-city-dragon-draft.png", alt: "Forbidden City dragon draft" },
-  { src: "/showcase/auspicious-beast-coaster-draft.png", alt: "Auspicious beast coaster draft" },
-  { src: "/showcase/beast-mask-coaster-draft.png", alt: "Beast mask coaster draft" },
-  { src: "/showcase/new-year-child-coaster-draft.png", alt: "New Year child coaster draft" },
-  { src: "/showcase/moon-rabbit-coaster-draft.png", alt: "Moon rabbit coaster draft" },
-  { src: "/showcase/ru-kiln-crackle-magnet-draft.png", alt: "Ru kiln crackle magnet draft" },
-  { src: "/showcase/vase-pattern-coaster-draft.png", alt: "Vase pattern coaster draft" },
-  { src: "/showcase/bamboo-shadow-coaster-draft.png", alt: "Bamboo shadow coaster draft" },
-  { src: "/showcase/jinli-coaster-pattern-draft.png", alt: "Jinli coaster pattern draft" },
-  { src: "/showcase/bronze-drum-coaster-draft.png", alt: "Bronze drum coaster draft" },
-  { src: "/showcase/tea-mountain-magnet-draft.png", alt: "Tea mountain magnet draft" },
-  { src: "/showcase/traditional-pixiu-beast.png", alt: "Traditional Pixiu beast" },
-  { src: "/showcase/phoenix-coaster-draft.png", alt: "Phoenix coaster draft" },
-  { src: "/showcase/ruyi-pattern-coaster-draft.png", alt: "Ruyi pattern coaster draft" },
-  { src: "/showcase/qilin-coaster-draft.png", alt: "Qilin coaster draft" },
+  { src: bijiangAsset("金楼.png"), alt: "碧江金楼" },
+  { src: bijiangAsset("金楼内部装饰.jpg"), alt: "金楼内部装饰" },
+  { src: bijiangAsset("砖雕大照壁.jpg"), alt: "砖雕大照壁" },
+  { src: bijiangAsset("泰兴大街.jpg"), alt: "泰兴大街" },
+  { src: bijiangAsset("慕堂苏公祠.jpg"), alt: "慕堂苏公祠" },
+  { src: bijiangAsset("南山蘓公祠.jpg"), alt: "南山蘓公祠" },
+  { src: bijiangAsset("峭岩蘓公祠.jpg"), alt: "峭岩蘓公祠" },
+  { src: bijiangAsset("照壁.jpg"), alt: "照壁" },
+  { src: bijiangAsset("怡堂.jpg"), alt: "怡堂" },
+  { src: bijiangAsset("太后宫.jpg"), alt: "太后宫" },
+  { src: bijiangAsset("德云居.jpg"), alt: "德云居" },
+  { src: bijiangAsset("复涌.jpg"), alt: "复涌" },
 ];
 
 const homeStepImages = [
@@ -348,7 +351,7 @@ const craftSteps = [
   {
     anchor: "guide-theme",
     title: "主题选择",
-    text: "从青花瓷、敦煌纹样、京剧脸谱、山海经、二十四节气等主题出发，确定适合拼豆表达的主体、纹样和色彩气质。",
+    text: "从碧江村建筑、雕刻、书塾与耕读文化出发，确定适合拼豆表达的核心元素和色彩气质。",
   },
   {
     anchor: "guide-upload",
@@ -363,7 +366,7 @@ const craftSteps = [
   {
     anchor: "guide-export",
     title: "制作与导出",
-    text: "生成材料、工具、拼豆、熨烫步骤和成本时间估算，并导出图纸、材料清单和制作方案。",
+    text: "汇总成本、用时、采购清单、难度阶梯和导出资料，并在右下角集中展示文化信息。",
   },
 ];
 
@@ -620,36 +623,36 @@ const helpData: HelpSection[] = [
 
 const showcaseEn = [
   {
-    title: "Blue Porcelain Lotus",
-    theme: "Blue-and-White Porcelain",
-    element: "Lotus",
-    meaning: "A clean blue-white lotus design inspired by porcelain aesthetics, suited to a simple coaster draft with clear negative space.",
-    author: "Celadon Studio",
-    avatar: "Ce",
+    title: "Gold-Foil Woodcarving",
+    theme: "Bijiang Village",
+    element: "Gold-Foil Woodcarving",
+    meaning: "A refined bead motif derived from the floral, figure, and auspicious carvings inside Bijiang Golden House.",
+    author: "Golden House Studio",
+    avatar: "Go",
   },
   {
-    title: "Dunhuang Apsaras",
-    theme: "Dunhuang",
-    element: "Flying Apsaras",
-    meaning: "A Silk Road inspired decorative motif using ribbons, music, mural colors, ochre red, earth yellow, and blue-green accents.",
-    author: "Dunhuang Palette",
-    avatar: "Du",
+    title: "Brick-Carved Screen Wall",
+    theme: "Bijiang Village",
+    element: "Narrative Brick Carving",
+    meaning: "A layered design inspired by Bijiang's monumental brick-carved screen wall and its theatrical auspicious scenes.",
+    author: "Bijiang Brick Studio",
+    avatar: "Br",
   },
   {
-    title: "Palace Wall Dragon",
-    theme: "Forbidden City Court Patterns",
-    element: "Palace Wall",
-    meaning: "A dignified court-style design combining royal architecture, ceremonial color, and auspicious ornament.",
-    author: "Palace Craft",
-    avatar: "Pa",
+    title: "Wok-Ear Gable",
+    theme: "Bijiang Village",
+    element: "Wok-Ear Gable",
+    meaning: "The soaring symmetrical silhouette of a Cantonese wok-ear gable becomes a recognizable Lingnan craft motif.",
+    author: "Lingnan Form Studio",
+    avatar: "Li",
   },
   {
-    title: "Auspicious Beast",
-    theme: "Classic of Mountains and Seas",
-    element: "Auspicious Beast",
-    meaning: "A mythic silhouette built from wings, mountain patterns, sun and moon symbols, black, vermilion, green, and gold.",
-    author: "Mythic Studio",
-    avatar: "My",
+    title: "Ancestral Hall and Learning",
+    theme: "Bijiang Village",
+    element: "Farming-and-Reading Culture",
+    meaning: "An ancestral-hall composition expressing remembrance, education, and the Bijiang ideal of farming and learning.",
+    author: "Heritage Workshop",
+    avatar: "He",
   },
 ];
 
@@ -882,13 +885,13 @@ function CraftSection({ setView, language }: { setView: (v: SiteView) => void; l
   }, [subtitleText, visible]);
 
   return (
-    <section ref={sectionRef} className="bg-[#fffdf7] py-20">
+    <section ref={sectionRef} className="bg-[#f3efe7] py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <p className="text-sm font-semibold text-[#8f1d21]">{L("制作流程", "Making Workflow")}</p>
+        <p className="text-sm font-semibold text-[#33596a]">{L("制作流程", "Making Workflow")}</p>
         <h2 className="mt-2 min-h-[1.2em] text-3xl font-semibold tracking-tight">
           {typedSub}
           {visible && typedSub.length < subtitleText.length && (
-            <span className="inline-block w-[2px] h-[0.9em] bg-[#8f1d21] ml-0.5 animate-pulse align-middle" />
+            <span className="inline-block w-[2px] h-[0.9em] bg-[#33596a] ml-0.5 animate-pulse align-middle" />
           )}
         </h2>
         <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -902,7 +905,7 @@ function CraftSection({ setView, language }: { setView: (v: SiteView) => void; l
                   document.getElementById(item.anchor)?.scrollIntoView({ behavior: "smooth" });
                 }, 150);
               }}
-              className={`flex h-full flex-col rounded-lg border border-stone-200 bg-[#fbf7ed] p-5 text-left transition-all duration-700 ease-out hover:border-[#8f1d21]/40 hover:shadow-sm ${
+              className={`flex h-full flex-col rounded-lg border border-stone-200 bg-[#f3efe7] p-5 text-left transition-all duration-700 ease-out hover:border-[#33596a]/40 hover:shadow-sm ${
                 visible
                   ? "opacity-100 translate-y-0"
                   : "opacity-0 translate-y-8"
@@ -915,7 +918,7 @@ function CraftSection({ setView, language }: { setView: (v: SiteView) => void; l
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={homeStepImages[i].src} alt={homeStepImages[i].alt} className="h-full w-full object-cover" />
               </div>
-              <p className="mt-3 text-xs font-bold tracking-wider text-[#8f1d21] uppercase">
+              <p className="mt-3 text-xs font-bold tracking-wider text-[#33596a] uppercase">
                 Step {i + 1}
               </p>
               <h3 className="mt-1 text-lg font-semibold">{item.title}</h3>
@@ -972,19 +975,19 @@ function HomeCommunitySection({ setView, language }: { setView: (v: SiteView) =>
   }, [faqTitle, forumTitle, visible]);
 
   return (
-    <section ref={sectionRef} className="bg-[#f8f5ef] py-20">
+    <section ref={sectionRef} className="bg-[#f3efe7] py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="space-y-12">
           <div>
-            <p className="text-sm font-semibold text-[#8f1d21]">{L("作品分享", "Work Sharing")}</p>
+            <p className="text-sm font-semibold text-[#33596a]">{L("作品分享", "Work Sharing")}</p>
             <h2 className="mt-2 min-h-[1.2em] text-3xl font-semibold tracking-tight">
               {forumText}
-              {visible && forumText.length < forumTitle.length && <span className="ml-0.5 inline-block h-[0.9em] w-[2px] animate-pulse bg-[#8f1d21] align-middle" />}
+              {visible && forumText.length < forumTitle.length && <span className="ml-0.5 inline-block h-[0.9em] w-[2px] animate-pulse bg-[#33596a] align-middle" />}
             </h2>
             <button
               type="button"
               onClick={() => setView("community")}
-              className={`mt-8 w-full rounded-lg border border-stone-200 bg-white p-6 text-left shadow-sm transition-all duration-700 hover:border-[#8f1d21]/50 hover:shadow-md ${visible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"}`}
+              className={`mt-8 w-full rounded-lg border border-stone-200 bg-white p-6 text-left shadow-sm transition-all duration-700 hover:border-[#33596a]/50 hover:shadow-md ${visible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"}`}
             >
               <div className="grid w-full grid-cols-4 gap-3">
                 {homeForumImages.map((image) => (
@@ -999,10 +1002,10 @@ function HomeCommunitySection({ setView, language }: { setView: (v: SiteView) =>
             </button>
           </div>
           <div>
-            <p className="text-sm font-semibold text-[#8f1d21]">{L("疑问解答", "Help")}</p>
+            <p className="text-sm font-semibold text-[#33596a]">{L("疑问解答", "Help")}</p>
             <h2 className="mt-2 min-h-[1.2em] text-3xl font-semibold tracking-tight">
               {faqText}
-              {visible && forumText.length >= forumTitle.length && faqText.length < faqTitle.length && <span className="ml-0.5 inline-block h-[0.9em] w-[2px] animate-pulse bg-[#8f1d21] align-middle" />}
+              {visible && forumText.length >= forumTitle.length && faqText.length < faqTitle.length && <span className="ml-0.5 inline-block h-[0.9em] w-[2px] animate-pulse bg-[#33596a] align-middle" />}
             </h2>
             <div className={`mt-8 grid gap-4 md:grid-cols-2 transition-all delay-200 duration-700 ${visible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"}`}>
               {nav.map((section) => (
@@ -1015,7 +1018,7 @@ function HomeCommunitySection({ setView, language }: { setView: (v: SiteView) =>
                       document.getElementById(section.id)?.scrollIntoView({ behavior: "smooth" });
                     }, 150);
                   }}
-                  className="rounded-lg border border-stone-200 bg-white p-6 text-left shadow-sm transition hover:border-[#8f1d21]/50 hover:shadow-md"
+                  className="rounded-lg border border-stone-200 bg-white p-6 text-left shadow-sm transition hover:border-[#33596a]/50 hover:shadow-md"
                 >
                   <span className="text-2xl">{section.icon}</span>
                   <h3 className="mt-3 text-xl font-semibold text-stone-950">{section.label}</h3>
@@ -1035,8 +1038,8 @@ function HomeCommunitySection({ setView, language }: { setView: (v: SiteView) =>
 function ScrollingPatternBand() {
   return (
     <div className="relative mt-12 overflow-hidden pt-4 pb-10" aria-hidden="true">
-      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-[#2b2118] to-transparent" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-[#2b2118] to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-[#33596a] to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-[#33596a] to-transparent" />
       <div className="home-pattern-scroll-track">
         {[0, 1].map((group) => (
           <div key={group} className="home-pattern-scroll-set">
@@ -1076,12 +1079,13 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
     document.documentElement.lang = language === "en" ? "en" : "zh-CN";
   }, [language]);
 
-  const firstTheme = cultureThemes[1] ?? cultureThemes[0];
+  const firstTheme = cultureThemes[0];
   const [view, setView] = useState<SiteView>(initialView);
   const [step, setStep] = useState<StudioStep>("config");
   const [theme, setTheme] = useState(firstTheme.name);
-  const [element, setElement] = useState(firstTheme.elements[0] ?? "传统纹样");
-  const [meaning, setMeaning] = useState(firstTheme.meaning);
+  const [element, setElement] = useState(firstTheme.elements[0] ?? "金箔木雕");
+  const [elementGroupId, setElementGroupId] = useState("all");
+  const [meaning, setMeaning] = useState(firstTheme.elementMeanings?.[firstTheme.elements[0]] ?? firstTheme.meaning);
   const [productId, setProductId] = useState("coaster");
   const [gridSize, setGridSize] = useState(() => getProductConfigDefault("coaster").gridSize);
   const [colorCount, setColorCount] = useState(() => getProductConfigDefault("coaster").colorCount);
@@ -1113,11 +1117,12 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
   const product = getProductTemplate(productId);
   const rawFormLabel = formLabels.find((item) => item.id === productId)?.label ?? "拼豆底稿";
   const formLabel = language === "en" ? formLabelEn[productId] ?? rawFormLabel : rawFormLabel;
+  const elementStructure = cultureThemes.find((item) => item.name === theme || item.id === theme)?.elementStructures?.[element] ?? "";
   const options = useMemo(
     () => ({
       theme,
       element,
-      meaning,
+      meaning: [meaning, elementStructure ? `【结构特征与生成约束】${elementStructure}` : ""].filter(Boolean).join("\n"),
       product: formLabel,
       productPrompt: product.aiPrompt,
       aspectRatio,
@@ -1125,7 +1130,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
       colorCount,
       language,
     }),
-    [aspectRatio, colorCount, element, formLabel, gridSize, language, meaning, product.aiPrompt, theme],
+    [aspectRatio, colorCount, element, elementStructure, formLabel, gridSize, language, meaning, product.aiPrompt, theme],
   );
 
   const paletteColors = useMemo(() => {
@@ -1181,6 +1186,14 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
     () => cultureThemes.find((item) => item.name === theme || item.id === theme),
     [theme],
   );
+  const isBijiangTheme = selectedCultureTheme?.id === "bijiang_village";
+  const filteredCultureElements = useMemo(() => {
+    const availableElements = selectedCultureTheme?.elements ?? [];
+    if (!isBijiangTheme || elementGroupId === "all") return availableElements;
+    const group = bijiangElementGroups.find((item) => item.id === elementGroupId);
+    const groupElements = new Set<string>(group?.elements ?? []);
+    return availableElements.filter((item) => groupElements.has(item));
+  }, [elementGroupId, isBijiangTheme, selectedCultureTheme]);
   const displayThemeName = useCallback((item: { id: string; name: string }) => (
     language === "en" ? themeEn[item.id]?.name ?? item.id.replaceAll("_", " ") : item.name
   ), [language]);
@@ -1356,10 +1369,10 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
 
 
   // 首页打字机动画状态
-  const homeTypingLine1 = L("方寸之间，粒粒皆可触摸的东方诗篇", "An Eastern poem you can touch, bead by bead");
+  const homeTypingLine1 = L("方寸之间，重遇碧江村的岭南风华", "Rediscover Bijiang's Lingnan Heritage, Bead by Bead");
   const homeTypingLine2 = L(
-    "从传统纹样中拾取一片色彩，让古老的审美以新的温度落回掌心。豆阁以AI为笔，将文化意象织入像素网格——选题、生成、映射、成稿，每一步皆是对传统的再创作，也是献给手作时光的一封情书。",
-    "Pick a color from traditional patterns and bring old aesthetics back into your hands. Doge uses AI to weave cultural imagery into pixel grids: choose a theme, generate imagery, map colors, and export a craft-ready pattern."
+    "从碧江村的金楼、祠堂、书塾与古街中拾取一片岭南色彩。豆阁以 AI 为笔，将金箔木雕、砖雕、镬耳山墙和耕读文化织入像素网格，让碧江记忆以新的温度落回掌心。",
+    "Draw from Bijiang Village's Golden House, ancestral halls, academies, and old streets. Doge uses AI to weave Lingnan architecture, carving crafts, and learning traditions into craft-ready pixel grids."
   );
   const [typedLine1, setTypedLine1] = useState("");
   const [typedLine2, setTypedLine2] = useState("");
@@ -1648,8 +1661,10 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
     setTheme(value);
     const next = cultureThemes.find((item) => item.name === value || item.id === value);
     if (!next) return;
-    setElement(next.elements[0] ?? "");
-    setMeaning(next.meaning);
+    const nextElement = next.elements[0] ?? "";
+    setElementGroupId("all");
+    setElement(nextElement);
+    setMeaning(next.elementMeanings?.[nextElement] ?? next.meaning);
     setForcedColors(next.paletteHints);
   };
 
@@ -1957,7 +1972,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                   className="mt-2 w-full rounded-md border border-stone-300 px-3 py-2 disabled:bg-stone-50"
                 />
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-stone-100">
-                  <div className="h-full bg-[#8f1d21]" style={{ width: `${Math.max(0, Math.min(100, identification.confidence * 100))}%` }} />
+                  <div className="h-full bg-[#33596a]" style={{ width: `${Math.max(0, Math.min(100, identification.confidence * 100))}%` }} />
                 </div>
               </label>
             </div>
@@ -2031,21 +2046,44 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                   ))}
                 </datalist>
                 {selectedCultureTheme && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {selectedCultureTheme.elements.map((item) => (
+                  <div className="mt-3 space-y-3">
+                    {isBijiangTheme && (
+                      <div className="flex flex-wrap gap-2" aria-label={L("核心元素分类筛选", "Core element category filters")}>
+                        {bijiangElementGroups.map((group) => (
+                          <button
+                            key={group.id}
+                            type="button"
+                            onClick={() => setElementGroupId(group.id)}
+                            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                              elementGroupId === group.id
+                                ? "border-[#b57938] bg-[#b57938] text-white"
+                                : "border-[#b57938]/20 bg-[#b57938]/5 text-[#8a5a2b] hover:border-[#b57938]/50"
+                            }`}
+                          >
+                            {group.label} · {group.elements.length}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex max-h-40 flex-wrap gap-2 overflow-y-auto pr-1">
+                    {filteredCultureElements.map((item) => (
                       <button
                         key={item}
                         type="button"
-                        onClick={() => setElement(item)}
+                        onClick={() => {
+                          setElement(item);
+                          setMeaning(selectedCultureTheme.elementMeanings?.[item] ?? selectedCultureTheme.meaning);
+                        }}
                         className={`rounded-full border px-3 py-1 text-xs transition ${
                           element === item
-                            ? "border-[#8f1d21] bg-[#8f1d21] text-white"
+                            ? "border-[#33596a] bg-[#33596a] text-white"
                             : "border-stone-200 bg-stone-50 text-stone-600 hover:border-stone-400"
                         }`}
                       >
                         {displayElementName(item)}
                       </button>
                     ))}
+                    </div>
                   </div>
                 )}
               </label>
@@ -2053,6 +2091,20 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                 {L("文化叙述", "Cultural Notes")}
                 <textarea value={displayMeaning(meaning)} onChange={(event) => setMeaning(event.target.value)} rows={4} className="mt-2 w-full resize-none rounded-md border border-stone-300 px-3 py-2" />
               </label>
+              {isBijiangTheme && (
+                <section className="rounded-md border border-[#33596a]/20 bg-[#f3efe7]/60 p-4" aria-live="polite">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-semibold text-[#33596a]">{L("结构特征与生成约束", "Structural Features & Generation Constraints")}</h3>
+                    <span className="shrink-0 rounded-full bg-[#33596a]/10 px-2 py-1 text-[11px] font-medium text-[#33596a]">{elementStructure.length} {L("字", "chars")}</span>
+                  </div>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-stone-700">
+                    {elementStructure || L("请从上方选择碧江文化元素以查看结构特征。", "Select a Bijiang cultural element above to view its structural features.")}
+                  </p>
+                  <p className="mt-2 text-xs leading-5 text-stone-500">
+                    {L("该内容为只读稳定性约束，会自动加入 AI 生成提示词，不会覆盖可编辑的文化叙述。", "This read-only stability constraint is automatically appended to the AI prompt without replacing your editable cultural notes.")}
+                  </p>
+                </section>
+              )}
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="text-sm font-medium">
                   {L("作品形式", "Product Type")}
@@ -2107,7 +2159,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                     handleGenerateAI();
                   }}
                   disabled={loading}
-                  className="rounded-md bg-[#8f1d21] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                  className="rounded-md bg-[#33596a] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
                 >
                   {loading ? L("生成中...", "Generating...") : L("AI 生成图案", "Generate AI Pattern")}
                 </button>
@@ -2153,7 +2205,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                   onClick={() => setColorFamily(f.key)}
                   className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
                     colorFamily === f.key
-                      ? "bg-[#8f1d21] text-white"
+                      ? "bg-[#33596a] text-white"
                       : "bg-stone-100 text-stone-600 hover:bg-stone-200"
                   }`}
                 >
@@ -2198,7 +2250,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                     type="button"
                     title={`${selected ? L(`已选第 ${selectedIndex + 1} 个`, `Selected #${selectedIndex + 1}`) : L("点击选择", "Click to select")}：${item.key} ${item.color}`}
                     onClick={() => setForcedColors((prev) => (selected ? prev.filter((hex) => hex !== item.color) : [...prev, item.color]))}
-                    className={`relative h-7 w-7 rounded border transition ${selected ? "border-stone-950 ring-2 ring-[#8f1d21]" : "border-stone-200 hover:scale-110"}`}
+                    className={`relative h-7 w-7 rounded border transition ${selected ? "border-stone-950 ring-2 ring-[#33596a]" : "border-stone-200 hover:scale-110"}`}
                     style={{ backgroundColor: item.color }}
                   >
                     {selected && (
@@ -2282,7 +2334,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                     type="button"
                     onClick={() => generateSubjectRecreation()}
                     disabled={loading || !subjectAnalysis || !subjectIdentification}
-                    className="mt-4 rounded-md bg-[#8f1d21] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                    className="mt-4 rounded-md bg-[#33596a] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
                   >
                     {loading ? L("生成中...", "Generating...") : L("AI 再创作", "AI Recreation")}
                   </button>
@@ -2303,7 +2355,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                       }
                     }}
                     disabled={loading || (!directGeneratedImage && (!subjectAnalysis || !subjectIdentification))}
-                    className="rounded-md bg-[#8f1d21] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                    className="rounded-md bg-[#33596a] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
                   >
                     {loading ? L("生成中...", "Generating...") : L("重新 AI 生成", "Regenerate with AI")}
                   </button>
@@ -2433,7 +2485,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                     onClick={() => setIsPainting(!isPainting)}
                     className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
                       isPainting
-                        ? 'bg-[#8f1d21] text-white shadow-sm'
+                        ? 'bg-[#33596a] text-white shadow-sm'
                         : 'bg-white text-stone-700 border border-stone-300 hover:bg-stone-100'
                     }`}
                   >
@@ -2468,7 +2520,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                           }}
                           className={`h-6 w-6 rounded border transition hover:scale-110 ${
                             paintColor === hex
-                              ? 'border-stone-950 ring-2 ring-[#8f1d21] scale-110'
+                              ? 'border-stone-950 ring-2 ring-[#33596a] scale-110'
                               : 'border-stone-400'
                           }`}
                           style={{ backgroundColor: hex }}
@@ -2490,7 +2542,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                   <div className="grid min-h-64 place-items-center text-center">
                     <div>
                       <p className="text-sm text-stone-500">{L("第三阶段会把主题提取图案转换成拼豆网格。", "Stage 3 converts the extracted design into a bead grid.")}</p>
-                      <button type="button" onClick={buildPatternFromExtracted} disabled={loading || !extractedImageUrl} className="mt-3 rounded-md bg-[#8f1d21] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
+                      <button type="button" onClick={buildPatternFromExtracted} disabled={loading || !extractedImageUrl} className="mt-3 rounded-md bg-[#33596a] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
                         {loading ? L("生成中...", "Generating...") : L("生成拼豆图纸", "Generate Bead Pattern")}
                       </button>
                     </div>
@@ -2715,7 +2767,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
               <div className="rounded-lg border border-stone-200 bg-white p-5">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <h3 className="text-lg font-semibold">{L("采购清单（含淘宝购买）", "Shopping List (Taobao)")}</h3>
-                  <button type="button" disabled={kit.items.length === 0} onClick={() => downloadKitCsv(kit, `${workTitle}-${language === "en" ? "shopping-list" : "采购清单"}.csv`)} className="rounded-md border border-[#8f1d21] px-3 py-1.5 text-xs font-semibold text-[#8f1d21] disabled:opacity-50">{L("导出采购清单 CSV", "Export Shopping List CSV")}</button>
+                  <button type="button" disabled={kit.items.length === 0} onClick={() => downloadKitCsv(kit, `${workTitle}-${language === "en" ? "shopping-list" : "采购清单"}.csv`)} className="rounded-md border border-[#33596a] px-3 py-1.5 text-xs font-semibold text-[#33596a] disabled:opacity-50">{L("导出采购清单 CSV", "Export Shopping List CSV")}</button>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
@@ -2742,7 +2794,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                           <td className="py-1.5 pr-3">{item.packs}</td>
                           <td className="py-1.5 pr-3">{item.pricePerPack}</td>
                           <td className="py-1.5 pr-3">{item.subtotal}</td>
-                          <td className="py-1.5"><a href={item.buyUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-[#8f1d21] underline">{L("淘宝购买", "Taobao")}</a></td>
+                          <td className="py-1.5"><a href={item.buyUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-[#33596a] underline">{L("淘宝购买", "Taobao")}</a></td>
                         </tr>
                       ))}
                     </tbody>
@@ -2767,7 +2819,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                     <h3 className="text-lg font-semibold">{L("难度分级 L1–L5（智能简化）", "Difficulty Ladder L1–L5")}</h3>
                     <p className="mt-1 text-xs text-stone-500">{L("同一张图自动生成 5 个难度：感知减色 + 结构保持的碎块合并——越低越好拼，越高越精细。", "Auto-generate 5 versions: perceptual color reduction + structure-preserving region merge.")}</p>
                   </div>
-                  <button type="button" disabled={!pattern || ladderLoading} onClick={generateLadder} className="shrink-0 rounded-md bg-[#8f1d21] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{ladderLoading ? L("生成中...", "...") : L("生成难度阶梯", "Generate Ladder")}</button>
+                  <button type="button" disabled={!pattern || ladderLoading} onClick={generateLadder} className="shrink-0 rounded-md bg-[#33596a] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{ladderLoading ? L("生成中...", "...") : L("生成难度阶梯", "Generate Ladder")}</button>
                 </div>
                 {ladder.length > 0 && (
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -2780,7 +2832,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                           {L("色号", "colors")} {item.stats.colorKinds}｜{L("豆", "beads")} {item.stats.beadCount}<br />
                           {L("碎块", "bits")} {item.stats.isolatedCount}
                         </div>
-                        <button type="button" onClick={() => applyLadderLevel(item)} className="mt-1 w-full rounded border border-[#8f1d21] px-2 py-1 text-[11px] font-semibold text-[#8f1d21]">{L("用这档", "Use")}</button>
+                        <button type="button" onClick={() => applyLadderLevel(item)} className="mt-1 w-full rounded border border-[#33596a] px-2 py-1 text-[11px] font-semibold text-[#33596a]">{L("用这档", "Use")}</button>
                       </div>
                     ))}
                   </div>
@@ -2824,7 +2876,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                       type="button"
                       onClick={() => generateCultureText(culturePrompt)}
                       disabled={cultureTextLoading}
-                      className="rounded-md bg-[#8f1d21] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                      className="rounded-md bg-[#33596a] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
                     >
                       {cultureTextLoading ? L("AI 生成中...", "Generating...") : L("重新 AI 生成", "Regenerate with AI")}
                     </button>
@@ -2845,7 +2897,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                       type="button"
                       onClick={() => generateCultureText()}
                       disabled={cultureTextLoading}
-                      className="rounded-md bg-[#8f1d21] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                      className="rounded-md bg-[#33596a] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
                     >
                       {cultureTextLoading ? L("AI 生成中...", "Generating...") : L("AI 生成文化说明", "Generate Cultural Notes")}
                     </button>
@@ -2876,11 +2928,11 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
           <div className="rounded-lg border border-stone-200 bg-white p-5">
             <h2 className="mb-3 text-xl font-semibold">{L("方案导出", "Export Plan")}</h2>
             <div className="grid gap-2 sm:grid-cols-2">
-              <button type="button" disabled={!patternUrl} onClick={() => patternUrl && downloadUrl(patternUrl, `${workTitle}-${language === "en" ? "bead-pattern" : "拼豆图纸"}.png`)} className="rounded-md bg-[#8f1d21] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{L("下载图纸 PNG", "Download Pattern PNG")}</button>
-              <button type="button" disabled={!cleanPatternUrl} onClick={() => cleanPatternUrl && downloadUrl(cleanPatternUrl, `${workTitle}-${language === "en" ? "clean-pattern" : "无标注图纸"}.png`)} className="rounded-md bg-[#8f1d21] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{L("下载无标注 PNG", "Download Clean PNG")}</button>
-              <button type="button" disabled={beadCounts.length === 0} onClick={() => downloadBeadCsv(beadCounts, `${workTitle}-${language === "en" ? "materials" : "材料清单"}.csv`)} className="rounded-md bg-[#8f1d21] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{L("导出材料 CSV", "Export Materials CSV")}</button>
-              <button type="button" disabled={kit.items.length === 0} onClick={() => downloadKitCsv(kit, `${workTitle}-${language === "en" ? "shopping-list" : "采购清单"}.csv`)} className="rounded-md bg-[#8f1d21] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{L("导出采购清单", "Export Shopping List")}</button>
-              <button type="button" disabled={!pattern} onClick={() => downloadTextFile(planText, `${workTitle}-${language === "en" ? "making-plan" : "制作方案"}.txt`)} className="rounded-md bg-[#8f1d21] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{L("导出制作方案", "Export Making Plan")}</button>
+              <button type="button" disabled={!patternUrl} onClick={() => patternUrl && downloadUrl(patternUrl, `${workTitle}-${language === "en" ? "bead-pattern" : "拼豆图纸"}.png`)} className="rounded-md bg-[#33596a] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{L("下载图纸 PNG", "Download Pattern PNG")}</button>
+              <button type="button" disabled={!cleanPatternUrl} onClick={() => cleanPatternUrl && downloadUrl(cleanPatternUrl, `${workTitle}-${language === "en" ? "clean-pattern" : "无标注图纸"}.png`)} className="rounded-md bg-[#33596a] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{L("下载无标注 PNG", "Download Clean PNG")}</button>
+              <button type="button" disabled={beadCounts.length === 0} onClick={() => downloadBeadCsv(beadCounts, `${workTitle}-${language === "en" ? "materials" : "材料清单"}.csv`)} className="rounded-md bg-[#33596a] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{L("导出材料 CSV", "Export Materials CSV")}</button>
+              <button type="button" disabled={kit.items.length === 0} onClick={() => downloadKitCsv(kit, `${workTitle}-${language === "en" ? "shopping-list" : "采购清单"}.csv`)} className="rounded-md bg-[#33596a] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{L("导出采购清单", "Export Shopping List")}</button>
+              <button type="button" disabled={!pattern} onClick={() => downloadTextFile(planText, `${workTitle}-${language === "en" ? "making-plan" : "制作方案"}.txt`)} className="rounded-md bg-[#33596a] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{L("导出制作方案", "Export Making Plan")}</button>
             </div>
           </div>
           <div className="rounded-lg border border-stone-200 bg-white p-5">
@@ -2905,7 +2957,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                     setProjectTitleManual(nextTitle.trim().length > 0 && nextTitle.trim() !== defaultProjectTitle);
                   }}
                   placeholder={defaultProjectTitle}
-                  className="mt-2 w-full rounded-md border border-stone-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#8f1d21] focus:ring-2 focus:ring-[#8f1d21]/20"
+                  className="mt-2 w-full rounded-md border border-stone-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#33596a] focus:ring-2 focus:ring-[#33596a]/20"
                 />
               </label>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -2913,7 +2965,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                   type="button"
                   onClick={saveCurrentProject}
                   disabled={!sourceImageUrl && !pattern && !patternUrl}
-                  className="rounded-md bg-[#8f1d21] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  className="rounded-md bg-[#33596a] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
                 >
                   {L("保存到项目", "Save to Projects")}
                 </button>
@@ -3368,8 +3420,8 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
   }, [view]);
 
   return (
-    <main className="min-h-screen bg-[#f8f5ef] text-stone-950">
-      <header className="sticky top-0 z-50 border-b border-stone-200/80 bg-[#fffdf7]/95 backdrop-blur">
+    <main className="min-h-screen bg-[#f3efe7] text-stone-950">
+      <header className="sticky top-0 z-50 border-b border-stone-200/80 bg-[#f3efe7]/95 backdrop-blur">
         <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* 左侧 Logo + 品牌文字 */}
           <button type="button" onClick={() => setView("home")} className="flex shrink-0 items-center gap-3">
@@ -3386,8 +3438,8 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
             <span className="hidden text-lg font-semibold text-stone-800 sm:inline">{ui.brand}</span>
           </button>
 
-          {/* 中间导航 - 绝对居中 */}
-          <nav className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-lg bg-stone-100 p-1.5">
+          {/* 桌面端导航 - 绝对居中 */}
+          <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 rounded-lg bg-stone-100 p-1.5 lg:flex">
               {navItems.map((item) => (
               <button
                 key={item.id}
@@ -3397,7 +3449,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
                 className={`rounded-md px-5 py-2.5 text-base font-semibold transition ${
-                  view === item.id ? "bg-[#8f1d21] text-white shadow-sm" : "text-stone-600 hover:text-stone-950"
+                  view === item.id ? "bg-[#33596a] text-white shadow-sm" : "text-stone-600 hover:text-stone-950"
                 }`}
               >
                 {language === "en" ? item.en : item.zh}
@@ -3433,13 +3485,14 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
             <div className="flex items-center gap-2">
               <button
                 type="button"
+                aria-label={ui.login}
                 onClick={() => {
                   setLoginModalStep("login");
                   setShowLoginModal(true);
                 }}
-                className="flex shrink-0 items-center gap-2 rounded-md bg-[#8f1d21] px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-[#a82428]"
+                className="flex shrink-0 items-center gap-2 rounded-md bg-[#33596a] px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-[#446f80]"
               >
-                <span className="grid h-7 w-7 place-items-center overflow-hidden rounded-full bg-[#a82428] text-xs font-semibold text-white">
+                <span className="grid h-7 w-7 place-items-center overflow-hidden rounded-full bg-[#446f80] text-xs font-semibold text-white">
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                   </svg>
@@ -3448,17 +3501,36 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
               </button>
               <button
                 type="button"
+                aria-label={ui.register}
                 onClick={() => {
                   setLoginModalStep("register");
                   setShowLoginModal(true);
                 }}
-                className="flex shrink-0 items-center gap-2 rounded-md border border-[#8f1d21] px-4 py-1.5 text-sm font-semibold text-[#8f1d21] transition hover:bg-[#8f1d21] hover:text-white"
+                className="flex shrink-0 items-center gap-2 rounded-md border border-[#33596a] px-4 py-1.5 text-sm font-semibold text-[#33596a] transition hover:bg-[#33596a] hover:text-white"
               >
+                <span className="sm:hidden" aria-hidden="true">＋</span>
                 <span className="hidden sm:inline">{ui.register}</span>
               </button>
             </div>
           )}
         </div>
+        <nav className="flex w-full items-center gap-1 overflow-x-auto border-t border-stone-200/70 bg-[#f3efe7] px-3 py-2 lg:hidden">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                setView(item.id);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              className={`shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-sm font-semibold transition ${
+                view === item.id ? "bg-[#33596a] text-white shadow-sm" : "text-stone-600 hover:text-stone-950"
+              }`}
+            >
+              {language === "en" ? item.en : item.zh}
+            </button>
+          ))}
+        </nav>
       </header>
 
       {/* 个人主页 */}
@@ -3466,6 +3538,10 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
         <ProfilePage
           onBack={() => setView("home")}
           onRestoreProject={handleRestoreProject}
+          onLogin={(user) => {
+            setCurrentUser(user);
+            refreshProjectRecords();
+          }}
           onApiConfigSaved={(config) => {
             setAutoSaveIntervalSeconds(normalizeAutoSaveIntervalSeconds(config.autoSaveIntervalSeconds));
           }}
@@ -3481,38 +3557,27 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
         />
       )}
 
+      {view === "checkin" && <BijiangCheckIn language={language} />}
+
       {view === "home" && (
         <>
-          <section className="relative isolate overflow-hidden bg-[#2b2118] text-white">
-            <Image
-              src="/home/traditional-village-hero.png"
-              alt=""
-              fill
-              priority
-              quality={92}
-              sizes="100vw"
-              className="-z-20 object-cover object-[50%_42%] brightness-[1.15] saturate-[1.08] sm:object-[center_45%]"
-            />
-            <div
-              aria-hidden="true"
-              className="absolute inset-0 -z-10"
-              style={{
-                background:
-                  "linear-gradient(90deg, rgba(32, 21, 13, 0.80) 0%, rgba(32, 21, 13, 0.62) 42%, rgba(32, 21, 13, 0.48) 60%, rgba(32, 21, 13, 0.28) 72%, rgba(32, 21, 13, 0.05) 84%)",
-              }}
-            />
-            <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-b from-[#20150d]/2 via-transparent to-[#20150d]/42" />
-
-            <div className="relative mx-auto max-w-7xl px-4 pb-8 pt-14 sm:px-6 lg:px-8">
-              <p className="text-sm font-semibold text-[#f2c46d]">{L("千年纹样 × 掌间拼豆", "Ancient Patterns x Handheld Bead Art")}</p>
+          <section
+            className="relative overflow-hidden bg-cover bg-[center_top] bg-no-repeat text-white"
+            style={{
+              backgroundImage:
+                "linear-gradient(90deg, rgba(24, 44, 50, 0.72) 0%, rgba(35, 65, 72, 0.58) 48%, rgba(24, 44, 50, 0.48) 100%), url('/main%20page.png')",
+            }}
+          >
+            <div className="mx-auto max-w-7xl px-4 pb-8 pt-14 sm:px-6 lg:px-8">
+              <p className="text-sm font-semibold text-[#d8a760]">{L("碧江村韵 × 掌间拼豆", "Bijiang Heritage x Handheld Bead Art")}</p>
 
               {/* 打字区域固定容器：防止打字时高度变化导致下方元素下移 */}
               <div className="min-h-[200px] md:min-h-[220px] lg:min-h-[260px]">
                 {/* 打字机标题 */}
-                <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl md:text-5xl lg:text-6xl xl:whitespace-nowrap">
+                <h1 className="mt-3 max-w-5xl text-3xl font-semibold leading-tight tracking-tight sm:text-4xl md:text-5xl lg:text-6xl xl:whitespace-nowrap">
                   {typedLine1}
                   {typedLine1.length > 0 && typedLine1.length < homeTypingLine1.length && (
-                    <span className="inline-block w-[2px] h-[0.8em] bg-[#f2c46d] ml-0.5 animate-pulse align-middle" />
+                    <span className="ml-0.5 inline-block h-[0.8em] w-[2px] animate-pulse bg-[#d8a760] align-middle" />
                   )}
                 </h1>
 
@@ -3520,15 +3585,15 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                 <p className="mt-5 max-w-2xl text-base leading-7 text-stone-200">
                   {typedLine2}
                   {typedLine2.length > 0 && typedLine2.length < homeTypingLine2.length && (
-                    <span className="inline-block w-[2px] h-[1em] bg-[#f2c46d] ml-0.5 animate-pulse align-middle" />
+                    <span className="ml-0.5 inline-block h-[1em] w-[2px] animate-pulse bg-[#d8a760] align-middle" />
                   )}
                 </p>
 
                 {/* 打字完成后浮现快速开始按钮 */}
                 <div className={`transition-all duration-700 ${typingDone ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6 pointer-events-none"}`}>
                   <div className="mt-7 flex flex-wrap gap-4">
-                    <button type="button" onClick={() => setView("start")} className="rounded-md bg-[#f2c46d] px-8 py-4 text-base font-bold text-stone-950 shadow-lg transition hover:bg-[#f4d07a] hover:shadow-xl">
-                      🚀 {L("快速开始", "Start Creating")}
+                    <button type="button" onClick={() => setView("start")} className="rounded-md bg-[#b57938] px-8 py-4 text-base font-bold text-white shadow-lg transition hover:bg-[#c78a49] hover:shadow-xl">
+                    {L("快速开始", "Start Creating")}
                     </button>
                   </div>
                 </div>
@@ -3566,7 +3631,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                       setView("start");
                       setStep("config");
                     }}
-                    className="w-full rounded-lg border border-white/15 bg-white/8 p-5 text-left text-white transition hover:bg-white/15 hover:ring-2 hover:ring-[#f2c46d]"
+                    className="w-full rounded-lg border border-white/15 bg-white/8 p-5 text-left text-white transition hover:bg-white/15 hover:ring-2 hover:ring-[#b57938]"
                   >
                     {item.previewImage ? (
                       <div className="aspect-square overflow-hidden rounded-md border border-white/15 bg-white/10">
@@ -3596,14 +3661,14 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
         <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 border-b border-stone-200 pb-8">
             <div>
-              <p className="text-sm font-semibold text-[#8f1d21]">{L("项目", "Projects")}</p>
+              <p className="text-sm font-semibold text-[#33596a]">{L("项目", "Projects")}</p>
               <h1 className="mt-2 text-4xl font-semibold tracking-tight text-stone-950">{L("最近设计", "Recent Designs")}</h1>
             </div>
             <input
               value={projectQuery}
               onChange={(event) => setProjectQuery(event.target.value)}
               placeholder={L("搜索项目名称、主题、元素...", "Search project name, theme, or element...")}
-              className="w-full rounded-md border border-stone-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#8f1d21] focus:ring-2 focus:ring-[#8f1d21]/20"
+              className="w-full rounded-md border border-stone-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#33596a] focus:ring-2 focus:ring-[#33596a]/20"
             />
           </div>
 
@@ -3630,7 +3695,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                     <p className="mt-2 text-xs text-stone-400">{new Date(record.updatedAt).toLocaleString(language === "en" ? "en-US" : "zh-CN")}</p>
                   </button>
                   <div className="mt-4 flex gap-2">
-                    <button type="button" onClick={() => handleRestoreProject(record)} className="rounded-md bg-[#8f1d21] px-3 py-2 text-sm font-semibold text-white">{L("继续编辑", "Continue Editing")}</button>
+                    <button type="button" onClick={() => handleRestoreProject(record)} className="rounded-md bg-[#33596a] px-3 py-2 text-sm font-semibold text-white">{L("继续编辑", "Continue Editing")}</button>
                     <button
                       type="button"
                       onClick={() => {
@@ -3651,9 +3716,9 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                 setStep("config");
                 setView("start");
               }}
-              className="grid min-h-[260px] place-items-center rounded-lg border border-dashed border-[#8f1d21]/40 bg-white p-6 text-center transition hover:border-[#8f1d21] hover:bg-[#8f1d21]/5"
+              className="grid min-h-[260px] place-items-center rounded-lg border border-dashed border-[#33596a]/40 bg-white p-6 text-center transition hover:border-[#33596a] hover:bg-[#33596a]/5"
             >
-              <span className="grid h-16 w-16 place-items-center rounded-full bg-[#8f1d21] text-4xl font-light leading-none text-white">+</span>
+              <span className="grid h-16 w-16 place-items-center rounded-full bg-[#33596a] text-4xl font-light leading-none text-white">+</span>
               <span className="mt-4 block text-sm font-semibold text-stone-700">{ui.newProject}</span>
             </button>
           </div>
@@ -3669,7 +3734,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
       {view === "ai" && (
         <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
           <div className="mb-6">
-            <p className="text-sm font-semibold text-[#8f1d21]">Doge AI</p>
+            <p className="text-sm font-semibold text-[#33596a]">Doge AI</p>
             <h1 className="mt-2 text-4xl font-semibold tracking-tight text-stone-950">{ui.aiTitle}</h1>
           </div>
           <AiChatPanel embedded resetToken={aiChatResetToken} language={language} />
@@ -3680,7 +3745,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
         <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-5 border-b border-stone-200 pb-8 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-sm font-semibold text-[#8f1d21]">{ui.forumEyebrow}</p>
+              <p className="text-sm font-semibold text-[#33596a]">{ui.forumEyebrow}</p>
               <h1 className="mt-2 text-4xl font-semibold tracking-tight text-stone-950">{ui.forumTitle}</h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-stone-600">
                 {ui.forumDesc}
@@ -3705,7 +3770,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
               value={communityQuery}
               onChange={(event) => setCommunityQuery(event.target.value)}
               placeholder={L("输入关键词：青花、飞天、脸谱、作者名...", "Enter keywords: porcelain, flying apsaras, mask, author...")}
-              className="mt-2 w-full rounded-md border border-stone-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#8f1d21] focus:ring-2 focus:ring-[#8f1d21]/20"
+              className="mt-2 w-full rounded-md border border-stone-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#33596a] focus:ring-2 focus:ring-[#33596a]/20"
             />
           </div>
 
@@ -3718,10 +3783,10 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                 key={post.id}
                 type="button"
                 onClick={() => openCommunityPost(post)}
-                className="group rounded-lg border border-stone-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-1 hover:border-[#8f1d21]/40 hover:shadow-md"
+                className="group rounded-lg border border-stone-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-1 hover:border-[#33596a]/40 hover:shadow-md"
               >
                 <div className="flex items-center gap-3">
-                  <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full bg-[#8f1d21] text-sm font-semibold text-white">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full bg-[#33596a] text-sm font-semibold text-white">
                     {displayPost.avatar.startsWith("data:") ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={displayPost.avatar} alt="" className="h-full w-full object-cover" />
@@ -3731,7 +3796,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                     <div className="flex items-center gap-2">
                       <p className="truncate text-sm font-semibold text-stone-900">{displayPost.author}</p>
                       {post.type === "project" && post.isOwnedByCurrentUser && (
-                        <span className="shrink-0 rounded-full bg-[#8f1d21]/10 px-2 py-0.5 text-[11px] font-semibold text-[#8f1d21]">
+                        <span className="shrink-0 rounded-full bg-[#33596a]/10 px-2 py-0.5 text-[11px] font-semibold text-[#33596a]">
                           {L("我的作品", "My Work")}
                         </span>
                       )}
@@ -3790,7 +3855,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
             </button>
             <div className="overflow-y-auto p-6">
               <div className="flex items-center gap-3 pr-20">
-                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#8f1d21] text-sm font-semibold text-white">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#33596a] text-sm font-semibold text-white">
                   {displayPost.avatar.startsWith("data:") ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={displayPost.avatar} alt="" className="h-full w-full object-cover" />
@@ -3843,7 +3908,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                   <button
                     type="button"
                     onClick={() => beginCommunityPostEdit(selectedCommunityPost)}
-                    className="rounded-md border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-[#8f1d21]/40 hover:text-[#8f1d21]"
+                    className="rounded-md border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-[#33596a]/40 hover:text-[#33596a]"
                   >
                     {L("编辑作品", "Edit Work")}
                   </button>
@@ -3863,7 +3928,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
               <button
                 type="button"
                 onClick={() => importCommunityPost(selectedCommunityPost)}
-                className="rounded-md bg-[#8f1d21] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#a82428]"
+                className="rounded-md bg-[#33596a] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#446f80]"
               >
                 {L("一键导入作品", "Import Work")}
               </button>
@@ -3878,7 +3943,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
         <div className="fixed inset-0 z-[60] grid place-items-center bg-black/55 px-4 py-8">
           <div className="w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-2xl">
             <div className="border-b border-stone-200 px-6 py-5">
-              <p className="text-sm font-semibold text-[#8f1d21]">{L("管理我的作品", "Manage My Work")}</p>
+              <p className="text-sm font-semibold text-[#33596a]">{L("管理我的作品", "Manage My Work")}</p>
               <h2 className="mt-1 text-2xl font-semibold text-stone-950">{L("编辑论坛作品", "Edit Forum Work")}</h2>
               <p className="mt-2 text-sm text-stone-500">
                 {L("修改只影响论坛中的展示信息，不会改动浏览器里保存的本地项目。", "Changes affect the forum post only and do not modify your locally saved project.")}
@@ -3891,7 +3956,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                   value={communityEditDraft.title}
                   onChange={(event) => setCommunityEditDraft((draft) => draft ? { ...draft, title: event.target.value } : draft)}
                   maxLength={120}
-                  className="mt-2 w-full rounded-md border border-stone-300 px-4 py-3 text-sm outline-none focus:border-[#8f1d21] focus:ring-2 focus:ring-[#8f1d21]/20"
+                  className="mt-2 w-full rounded-md border border-stone-300 px-4 py-3 text-sm outline-none focus:border-[#33596a] focus:ring-2 focus:ring-[#33596a]/20"
                 />
               </label>
               <label>
@@ -3900,7 +3965,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                   value={communityEditDraft.theme}
                   onChange={(event) => setCommunityEditDraft((draft) => draft ? { ...draft, theme: event.target.value } : draft)}
                   maxLength={80}
-                  className="mt-2 w-full rounded-md border border-stone-300 px-4 py-3 text-sm outline-none focus:border-[#8f1d21] focus:ring-2 focus:ring-[#8f1d21]/20"
+                  className="mt-2 w-full rounded-md border border-stone-300 px-4 py-3 text-sm outline-none focus:border-[#33596a] focus:ring-2 focus:ring-[#33596a]/20"
                 />
               </label>
               <label>
@@ -3909,7 +3974,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                   value={communityEditDraft.element}
                   onChange={(event) => setCommunityEditDraft((draft) => draft ? { ...draft, element: event.target.value } : draft)}
                   maxLength={80}
-                  className="mt-2 w-full rounded-md border border-stone-300 px-4 py-3 text-sm outline-none focus:border-[#8f1d21] focus:ring-2 focus:ring-[#8f1d21]/20"
+                  className="mt-2 w-full rounded-md border border-stone-300 px-4 py-3 text-sm outline-none focus:border-[#33596a] focus:ring-2 focus:ring-[#33596a]/20"
                 />
               </label>
               <label className="sm:col-span-2">
@@ -3919,7 +3984,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                   onChange={(event) => setCommunityEditDraft((draft) => draft ? { ...draft, meaning: event.target.value } : draft)}
                   maxLength={800}
                   rows={5}
-                  className="mt-2 w-full resize-y rounded-md border border-stone-300 px-4 py-3 text-sm leading-6 outline-none focus:border-[#8f1d21] focus:ring-2 focus:ring-[#8f1d21]/20"
+                  className="mt-2 w-full resize-y rounded-md border border-stone-300 px-4 py-3 text-sm leading-6 outline-none focus:border-[#33596a] focus:ring-2 focus:ring-[#33596a]/20"
                 />
               </label>
             </div>
@@ -3936,7 +4001,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                 type="button"
                 onClick={saveCommunityPostEdits}
                 disabled={communityMutationLoading}
-                className="rounded-md bg-[#8f1d21] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#a82428] disabled:cursor-wait disabled:opacity-60"
+                className="rounded-md bg-[#33596a] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#446f80] disabled:cursor-wait disabled:opacity-60"
               >
                 {communityMutationLoading ? L("正在保存...", "Saving...") : L("保存修改", "Save Changes")}
               </button>
@@ -4017,7 +4082,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
 
           {/* 右侧内容区域 */}
           <div className="min-w-0 flex-1 lg:pl-8">
-            <p className="text-sm font-semibold text-[#8f1d21]">{L("创作指南", "Creation Guide")}</p>
+            <p className="text-sm font-semibold text-[#33596a]">{L("创作指南", "Creation Guide")}</p>
             <h1 className="mt-2 text-4xl font-semibold tracking-tight">{L("豆阁 · 帮助", "Doge · Help")}</h1>
 
             {/* 移动端顶部快速导航 */}
@@ -4053,7 +4118,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                     <h2 className="flex items-center gap-2 text-xl font-semibold">
                       {!stepLabel && <span>{section.icon}</span>}
                       {stepLabel && (
-                        <span className="text-sm font-bold tracking-wider text-[#8f1d21] uppercase">{stepLabel}</span>
+                        <span className="text-sm font-bold tracking-wider text-[#33596a] uppercase">{stepLabel}</span>
                       )}
                       <span>{section.title}</span>
                     </h2>
@@ -4119,10 +4184,10 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                   }}
                   className={`rounded-lg border p-4 text-left transition ${
                     step === item.id
-                      ? "border-[#8f1d21] bg-[#8f1d21] text-white shadow-sm"
+                      ? "border-[#33596a] bg-[#33596a] text-white shadow-sm"
                       : !canAccess
                         ? "cursor-not-allowed border-stone-200 bg-white/60 text-stone-400"
-                        : "border-stone-200 bg-white text-stone-700 hover:border-[#8f1d21]/50"
+                        : "border-stone-200 bg-white text-stone-700 hover:border-[#33596a]/50"
                   }`}
                 >
                   <span className="text-xs font-semibold">0{index + 1}</span>
@@ -4180,7 +4245,7 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
                         if (file) void doUpload(file);
                       }
                     }}
-                    className="rounded-md bg-[#8f1d21] px-4 py-2 text-sm font-semibold text-white"
+                    className="rounded-md bg-[#33596a] px-4 py-2 text-sm font-semibold text-white"
                   >
                     {L("确认放弃", "Discard")}
                   </button>
@@ -4218,13 +4283,13 @@ export default function CreativeBeadStudio({ initialView = "home" }: { initialVi
       )}
 
       {/* 页脚 - 产权标语 */}
-      <footer className="border-t border-stone-200 bg-[#fffdf7]">
+      <footer className="border-t border-stone-200 bg-[#f3efe7]">
         <div className="mx-auto flex max-w-7xl flex-col items-center gap-1 px-4 py-6 text-center sm:px-6 lg:px-8">
           <p className="text-xs text-stone-400">
             &copy; {new Date().getFullYear()} {L("豆阁 Doge — 拼豆图纸生成工具", "Doge - Bead Pattern Design Tool")}
           </p>
           <p className="text-xs text-stone-400">
-            {L("基于 Apache 2.0 开源协议 · 以 AI 为笔，让千年纹样织入像素网格", "Apache 2.0 licensed · Weaving heritage patterns into pixel grids with AI")}
+            {L("基于 AGPL-3.0 开源协议 · 以 AI 为笔，让碧江村文化织入像素网格", "AGPL-3.0 licensed · Weaving Bijiang heritage into pixel grids with AI")}
           </p>
           <p className="mt-1 text-[11px] text-stone-300">
             All Rights Reserved.

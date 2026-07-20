@@ -264,7 +264,7 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
       className={embedded ? "flex h-[calc(100vh-10rem)] min-h-[620px] w-full flex-col rounded-lg border border-stone-200 bg-white shadow-sm" : "mx-4 flex h-[600px] w-full max-w-lg flex-col rounded-xl bg-white shadow-2xl"}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="flex items-center justify-between rounded-t-lg bg-[#2b2118] px-5 py-3 text-white">
+      <div className="flex items-center justify-between rounded-t-lg bg-[#33596a] px-5 py-3 text-white">
         <div className="flex items-center gap-2">
           <span className="font-semibold">{ui.title}</span>
         </div>
@@ -301,7 +301,7 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
             <div
               className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                 msg.role === "user"
-                  ? "rounded-br-md bg-[#8f1d21] text-white"
+                  ? "rounded-br-md bg-[#33596a] text-white"
                   : "rounded-bl-md bg-stone-100 text-stone-800"
               }`}
             >
@@ -329,13 +329,13 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
         {error && !loading && (
           <p className="mb-2 text-xs text-red-500">{error}</p>
         )}
-        <div className="mb-3 inline-flex rounded-lg border border-[#8f1d21]/25 bg-[#8f1d21]/8 p-1">
+        <div className="mb-3 inline-flex rounded-lg border border-[#33596a]/25 bg-[#33596a]/8 p-1">
           <button
             type="button"
             onClick={() => setMode("text")}
             disabled={loading}
             className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-              mode === "text" ? "bg-[#8f1d21] text-white shadow-sm" : "text-[#8f1d21]/72 hover:text-[#8f1d21]"
+              mode === "text" ? "bg-[#33596a] text-white shadow-sm" : "text-[#33596a]/72 hover:text-[#33596a]"
             } disabled:opacity-50`}
           >
             {ui.textMode}
@@ -345,7 +345,7 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
             onClick={() => setMode("image")}
             disabled={loading}
             className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-              mode === "image" ? "bg-[#8f1d21] text-white shadow-sm" : "text-[#8f1d21]/72 hover:text-[#8f1d21]"
+              mode === "image" ? "bg-[#33596a] text-white shadow-sm" : "text-[#33596a]/72 hover:text-[#33596a]"
             } disabled:opacity-50`}
           >
             {ui.imageMode}
@@ -359,7 +359,7 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
             onKeyDown={handleKeyDown}
             placeholder={showApiWarning ? ui.configureApi : mode === "image" ? ui.imagePlaceholder : ui.textPlaceholder}
             disabled={showApiWarning || loading}
-            className="flex-1 rounded-lg border border-stone-300 px-4 py-2.5 text-sm focus:border-[#8f1d21] focus:outline-none focus:ring-1 focus:ring-[#8f1d21] disabled:opacity-50"
+            className="flex-1 rounded-lg border border-stone-300 px-4 py-2.5 text-sm focus:border-[#33596a] focus:outline-none focus:ring-1 focus:ring-[#33596a] disabled:opacity-50"
             autoFocus
           />
           <button
@@ -369,8 +369,8 @@ export default function AiChatPanel({ isOpen = true, onClose, resetToken = 0, em
             aria-label={loading ? (mode === "image" ? ui.interruptImage : ui.interruptText) : ui.send}
             title={loading ? (mode === "image" ? ui.interruptImage : ui.interruptText) : ui.send}
             className={loading
-              ? "grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#8f1d21] text-white shadow-sm transition hover:bg-[#a82428] disabled:opacity-50"
-              : "rounded-lg bg-[#8f1d21] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+              ? "grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#33596a] text-white shadow-sm transition hover:bg-[#446f80] disabled:opacity-50"
+              : "rounded-lg bg-[#33596a] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             }
           >
             {loading ? <span className="h-3.5 w-3.5 rounded-[2px] bg-white" /> : ui.send}
